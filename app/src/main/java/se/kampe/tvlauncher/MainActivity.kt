@@ -23,7 +23,8 @@ import android.widget.Toast
 /**
  * Home screen, layout D ("center stage") from design/mockups.html: muted wallpaper, a large
  * clock and the home apps (see [HomeApps]) in one glass pill, ending in a More apps button.
- * Top right, a glass bar lists the HDMI inputs (see [Inputs]); ▲ from the dock reaches it.
+ * Top right, a glass bar lists the HDMI inputs (see [Inputs]); top left, [HueCorner] sets Hue
+ * scenes. ▲ from the dock reaches them.
  *
  * Holding OK on an app lifts it ("move mode"): ◀ ▶ slide it along the dock, OK or Back puts
  * it down and saves the order.
@@ -34,6 +35,7 @@ class MainActivity : Activity() {
     private lateinit var moveHint: TextView
     private var dockKeys: List<String>? = null
     private lateinit var inputBar: GlassView
+    private lateinit var hue: HueCorner
     private var shownInputs: List<HdmiInput>? = null
 
     /** Consoles turning on or off, or devices appearing over HDMI-CEC, update the input bar. */
@@ -62,6 +64,10 @@ class MainActivity : Activity() {
         inputBar = findViewById(R.id.inputs)
         inputBar.glass = wallpaper.glass
         moveHint = findViewById(R.id.move_hint)
+
+        val hueBar = findViewById<GlassView>(R.id.hue).apply { glass = wallpaper.glass }
+        val huePanel = findViewById<GlassView>(R.id.hue_panel).apply { glass = wallpaper.glass }
+        hue = HueCorner(this, hueBar, huePanel, findViewById(R.id.hue_dim), ::linkCorners)
     }
 
     override fun onStart() {
@@ -80,14 +86,17 @@ class MainActivity : Activity() {
         val apps = Apps.forKeys(this, HomeApps.load(this))
         if (apps.map { it.key } != dockKeys) buildDock(apps)
         refreshInputs()
+        hue.start()
     }
 
     override fun onPause() {
         endMove()
+        hue.stop()
         super.onPause()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (hue.onKey(event)) return true
         if (moving == null) return super.dispatchKeyEvent(event)
         val down = event.action == KeyEvent.ACTION_DOWN
         when (event.keyCode) {
@@ -220,11 +229,23 @@ class MainActivity : Activity() {
             if (i > 0) layoutInflater.inflate(R.layout.input_divider, inputBar, true)
             makeInputSegment(input).also(inputBar::addView)
         }
-        // ◀ on the first and ▶ on the last stay in the bar instead of dropping to the dock.
-        segments.firstOrNull()?.let { it.nextFocusLeftId = it.id }
+        // ▶ on the last input stays in the bar instead of dropping to the dock.
         segments.lastOrNull()?.let { it.nextFocusRightId = it.id }
         inputBar.visibility = if (inputs.isEmpty()) View.GONE else View.VISIBLE
+        linkCorners()
         segments.firstOrNull { it.tag == focusedId }?.requestFocus()
+    }
+
+    /**
+     * Links the two top corners: ◀ ▶ move between the Hue bar and the first input, and at the
+     * outer ends focus stays put instead of dropping down to the dock.
+     */
+    private fun linkCorners() {
+        val hueSegment = hue.segment.takeIf { (it.parent as View).visibility == View.VISIBLE }
+        val firstInput = inputBar.getChildAt(1)?.takeIf { inputBar.visibility == View.VISIBLE }
+        hue.segment.nextFocusLeftId = hue.segment.id
+        hue.segment.nextFocusRightId = firstInput?.id ?: hue.segment.id
+        firstInput?.nextFocusLeftId = hueSegment?.id ?: firstInput?.id ?: View.NO_ID
     }
 
     private fun makeInputSegment(input: HdmiInput): View {

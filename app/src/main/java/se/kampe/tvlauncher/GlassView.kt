@@ -16,9 +16,9 @@ import android.view.ViewOutlineProvider
 import android.widget.LinearLayout
 
 /**
- * A pill-shaped "frosted glass" row: draws the part of the pre-blurred [glass] wallpaper that
- * lies behind it, a light white fill and a thin border. [glass] must cover the whole window
- * (same aspect ratio), as the wallpaper does.
+ * A pill-shaped (or, with [cornerRadius], rounded) "frosted glass" panel: draws the part of the
+ * pre-blurred [glass] wallpaper that lies behind it, a light white fill and a thin border.
+ * [glass] must cover the whole window (same aspect ratio), as the wallpaper does.
  */
 class GlassView @JvmOverloads constructor(
     context: Context,
@@ -31,6 +31,16 @@ class GlassView @JvmOverloads constructor(
             glassPaint.shader = value?.let { BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP) }
             invalidate()
         }
+
+    /** Corner radius in px; negative (the default) makes a pill with fully rounded ends. */
+    var cornerRadius = -1f
+        set(value) {
+            field = value
+            invalidateOutline()
+            invalidate()
+        }
+
+    private fun radius() = if (cornerRadius < 0) height / 2f else cornerRadius
 
     private val density = resources.displayMetrics.density
     private val glassPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -50,7 +60,7 @@ class GlassView @JvmOverloads constructor(
         clipToPadding = false
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, view.height / 2f)
+                outline.setRoundRect(0, 0, view.width, view.height, radius())
                 outline.alpha = 0.25f
             }
         }
@@ -58,7 +68,7 @@ class GlassView @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        val radius = height / 2f
+        val radius = radius()
         rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
         glass?.let { bmp ->

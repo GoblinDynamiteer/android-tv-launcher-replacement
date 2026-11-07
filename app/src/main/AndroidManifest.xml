@@ -4,6 +4,9 @@
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- The Hue bridge on the local network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Android 11 package visibility: every TV app, Settings, and the TV input services
          (to read the names of HDMI inputs). -->
     <queries>

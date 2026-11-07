@@ -45,6 +45,70 @@
             android:textSize="19sp" />
     </LinearLayout>
 
+    <!-- Hue scenes (design/hue-mockups.html, H1): bulb icon, then the current scene. -->
+    <se.kampe.tvlauncher.GlassView
+        android:id="@+id/hue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="26dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="9dp"
+            android:layout_marginEnd="6dp"
+            android:alpha="0.75"
+            android:contentDescription="@string/hue"
+            android:src="@drawable/ic_lightbulb" />
+
+        <LinearLayout
+            android:id="@+id/hue_current"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:background="@drawable/input_segment"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="9dp"
+            android:paddingEnd="12dp">
+
+            <se.kampe.tvlauncher.PaletteDot
+                android:id="@+id/hue_dot"
+                android:layout_width="13dp"
+                android:layout_height="13dp"
+                android:duplicateParentState="true" />
+
+            <TextView
+                android:id="@+id/hue_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:duplicateParentState="true"
+                android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/input_label"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:alpha="0.6"
+                android:duplicateParentState="true"
+                android:text="@string/chevron_down"
+                android:textColor="@color/input_label"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </se.kampe.tvlauncher.GlassView>
+
     <!-- HDMI inputs (design/inputs-mockups.html, I2): gamepad icon, then one segment per input. -->
     <se.kampe.tvlauncher.GlassView
         android:id="@+id/inputs"
@@ -93,4 +157,77 @@
         android:textColor="@color/text"
         android:textSize="11sp"
         android:visibility="gone" />
+
+    <!-- Hue scene list, dropped below the Hue bar over a dimmed home screen. -->
+    <View
+        android:id="@+id/hue_dim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#59000000"
+        android:visibility="gone" />
+
+    <se.kampe.tvlauncher.GlassView
+        android:id="@+id/hue_panel"
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="73dp"
+        android:orientation="vertical"
+        android:padding="9dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="9dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="7dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.55"
+                android:text="@string/arrow_left"
+                android:textColor="@color/text"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/hue_group"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:alpha="0.7"
+                android:gravity="center"
+                android:letterSpacing="0.15"
+                android:maxLines="1"
+                android:textAllCaps="true"
+                android:textColor="@color/text"
+                android:textSize="9.5sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.55"
+                android:text="@string/arrow_right"
+                android:textColor="@color/text"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/hue_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/hue_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+    </se.kampe.tvlauncher.GlassView>
 </FrameLayout>
