@@ -1,0 +1,26 @@
+# Claude instructions live in my dotfiles repo and are symlinked in
+CLAUDE.md
+.claude/
+
+# Gradle / Android build output
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing keys
+*.jks
+*.keystore
+keystore.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
