@@ -49,7 +49,13 @@ class HueCorner(
     private var brightnessGroup: String? = null
     private var polling = false
     /** What the bar's favourite buttons were built from, to rebuild only on changes. */
-    private var shownFavourites: List<HueScene>? = null
+    private var shownFavourites: List<Favourite>? = null
+
+    /**
+     * A favourite button: a scene, or a room's "Lights off" ([key] `off:<room id>`).
+     * [colors] empty draws the dark "off" dot.
+     */
+    private data class Favourite(val key: String, val label: String, val colors: List<Int>)
 
     val isOpen get() = panel.visibility == View.VISIBLE
     val isVisible get() = bar.visibility == View.VISIBLE
@@ -142,25 +148,41 @@ class HueCorner(
 
     /** Rebuilds the favourite buttons after the current scene, if they changed. */
     private fun updateFavourites() {
-        val scenes = hue.favourites.mapNotNull(::find).map { it.second.copy(active = false) }
-        if (scenes == shownFavourites) return
-        shownFavourites = scenes
+        val favourites = hue.favourites.mapNotNull { key ->
+            val offGroup = key.removePrefix(OFF_PREFIX).takeIf { key.startsWith(OFF_PREFIX) }
+            if (offGroup != null) {
+                groups.firstOrNull { it.id == offGroup }
+                    ?.let { Favourite(key, activity.getString(R.string.hue_group_off, it.name), emptyList()) }
+            } else {
+                find(key)?.let { (_, scene) -> Favourite(key, scene.name, colorsOf(scene)) }
+            }
+        }
+        if (favourites == shownFavourites) return
+        shownFavourites = favourites
 
         val focusedId = bar.focusedChild?.tag
         bar.removeViews(2, bar.childCount - 2) // keep the bulb and the current scene
-        for (scene in scenes) {
+        for (fav in favourites) {
             activity.layoutInflater.inflate(R.layout.input_divider, bar, true)
             val button = activity.layoutInflater.inflate(R.layout.hue_favourite, bar, false)
             button.id = View.generateViewId()
-            button.tag = scene.id
-            button.findViewById<PaletteDot>(R.id.dot).colors = colorsOf(scene)
-            button.findViewById<TextView>(R.id.label).text = scene.name
-            button.setOnClickListener { find(scene.id)?.let { (g, s) -> choose(g, s) } }
+            button.tag = fav.key
+            button.findViewById<PaletteDot>(R.id.dot).colors = fav.colors
+            button.findViewById<TextView>(R.id.label).text = fav.label
+            button.setOnClickListener { chooseFavourite(fav.key) }
             bar.addView(button)
         }
         onBarChanged()
         if (focusedId != null) {
             ((0 until bar.childCount).map(bar::getChildAt).firstOrNull { it.tag == focusedId } ?: segment).requestFocus()
+        }
+    }
+
+    private fun chooseFavourite(key: String) {
+        if (key.startsWith(OFF_PREFIX)) {
+            groups.firstOrNull { it.id == key.removePrefix(OFF_PREFIX) }?.let { choose(it, null) }
+        } else {
+            find(key)?.let { (g, s) -> choose(g, s) }
         }
     }
 
@@ -226,14 +248,19 @@ class HueCorner(
         for (scene in group.scenes) {
             val row = row(scene.name, colorsOf(scene), scene.active && group.on, scene.id in hue.favourites)
             row.setOnClickListener { choose(group, scene) }
-            row.setOnLongClickListener { toggleFavourite(row, scene); true }
+            row.setOnLongClickListener { toggleFavourite(row, scene.id, scene.name); true }
             list.addView(row)
             rows += row
         }
         if (group.lightsId != null) {
             activity.layoutInflater.inflate(R.layout.hue_separator, list, true)
-            val off = row(activity.getString(R.string.hue_off), emptyList(), !group.on, false)
+            val offKey = OFF_PREFIX + group.id
+            val off = row(activity.getString(R.string.hue_off), emptyList(), !group.on, offKey in hue.favourites)
             off.setOnClickListener { choose(group, null) }
+            off.setOnLongClickListener {
+                toggleFavourite(off, offKey, activity.getString(R.string.hue_group_off, group.name))
+                true
+            }
             list.addView(off)
             rows += off
         }
@@ -260,11 +287,12 @@ class HueCorner(
         return row
     }
 
-    private fun toggleFavourite(row: View, scene: HueScene) {
-        val added = hue.toggleFavourite(scene.id)
+    /** Stars or unstars [key] (a scene id or `off:<room id>`), named [name] in the message. */
+    private fun toggleFavourite(row: View, key: String, name: String) {
+        val added = hue.toggleFavourite(key)
         row.findViewById<View>(R.id.star).visibility = if (added) View.VISIBLE else View.GONE
         val msg = if (added) R.string.hue_favourite_added else R.string.hue_favourite_removed
-        Toast.makeText(activity, activity.getString(msg, scene.name), Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, activity.getString(msg, name), Toast.LENGTH_SHORT).show()
         updateFavourites()
         row.requestFocus() // rebuilding the bar must not pull focus out of the list
     }
@@ -336,6 +364,8 @@ class HueCorner(
 
     companion object {
         private const val TAG = "HueCorner"
+        /** Favourite key prefix for a room's "Lights off". */
+        private const val OFF_PREFIX = "off:"
         /** For scenes without colour data (brightness only). */
         private val WARM_WHITE = Hue.mirekColor(370)
     }

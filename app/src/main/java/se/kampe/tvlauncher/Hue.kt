@@ -86,16 +86,19 @@ class Hue(private val context: Context) {
         )
     }
 
-    /** Scene ids starred in the list (held OK), shown as buttons in the bar. Kept on the TV. */
+    /**
+     * Favourites starred in the list (held OK), shown as buttons in the bar: scene ids, or
+     * `off:<room id>` for a room's "Lights off". Kept on the TV.
+     */
     var favourites: List<String>
         get() = prefs.getString("favourites", "").orEmpty().split(",").filter { it.isNotEmpty() }
         set(value) = prefs.edit().putString("favourites", value.joinToString(",")).apply()
 
-    /** Stars or unstars [sceneId]. Returns true if it's now a favourite. */
-    fun toggleFavourite(sceneId: String): Boolean {
+    /** Stars or unstars [key]. Returns true if it's now a favourite. */
+    fun toggleFavourite(key: String): Boolean {
         val favs = favourites.toMutableList()
-        val added = !favs.remove(sceneId)
-        if (added) favs.add(sceneId)
+        val added = !favs.remove(key)
+        if (added) favs.add(key)
         favourites = favs
         return added
     }
