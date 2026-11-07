@@ -55,4 +55,19 @@
         android:orientation="horizontal"
         android:paddingHorizontal="7dp"
         android:paddingVertical="11dp" />
+
+    <!-- Shown while an app is being moved along the dock. -->
+    <TextView
+        android:id="@+id/move_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="432dp"
+        android:background="@drawable/hint_background"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="7dp"
+        android:text="@string/move_hint"
+        android:textColor="@color/text"
+        android:textSize="11sp"
+        android:visibility="gone" />
 </FrameLayout>

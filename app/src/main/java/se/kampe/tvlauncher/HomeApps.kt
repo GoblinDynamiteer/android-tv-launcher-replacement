@@ -23,8 +23,20 @@ object HomeApps {
         val keys = load(context).toMutableList()
         val added = !keys.remove(key)
         if (added) keys.add(key)
-        prefs(context).edit().putString(KEY, keys.joinToString(",")).apply()
+        save(context, keys)
         return added
+    }
+
+    /**
+     * Saves a new order for [keys]. Pinned apps that aren't in [keys] (e.g. uninstalled, so
+     * not shown on the dock) keep their place at the end.
+     */
+    fun setOrder(context: Context, keys: List<String>) {
+        save(context, keys + load(context).filter { it !in keys })
+    }
+
+    private fun save(context: Context, keys: List<String>) {
+        prefs(context).edit().putString(KEY, keys.joinToString(",")).apply()
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
