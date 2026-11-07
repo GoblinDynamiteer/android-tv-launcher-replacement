@@ -4,7 +4,8 @@
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- Android 11 package visibility: every TV app, and Settings. -->
+    <!-- Android 11 package visibility: every TV app, Settings, and the TV input services
+         (to read the names of HDMI inputs). -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -12,6 +13,9 @@
         </intent>
         <intent>
             <action android:name="android.settings.SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.media.tv.TvInputService" />
         </intent>
     </queries>
 

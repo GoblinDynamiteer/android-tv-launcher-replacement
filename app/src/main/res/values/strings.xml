@@ -10,5 +10,7 @@
     <string name="hint">%1$s  ·  OK open  ·  Hold OK %2$s</string>
     <string name="hint_add">add to Home</string>
     <string name="hint_remove">remove from Home</string>
+    <string name="inputs">Inputs</string>
+    <string name="input_failed">Couldn\'t open %1$s</string>
     <string name="move_hint">◀ ▶  move  ·  OK  done</string>
 </resources>

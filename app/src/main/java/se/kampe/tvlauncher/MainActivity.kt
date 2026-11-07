@@ -3,18 +3,27 @@ package se.kampe.tvlauncher
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.media.tv.TvInputInfo
+import android.media.tv.TvInputManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 
 /**
  * Home screen, layout D ("center stage") from design/mockups.html: muted wallpaper, a large
  * clock and the home apps (see [HomeApps]) in one glass pill, ending in a More apps button.
+ * Top right, a glass bar lists the HDMI inputs (see [Inputs]); ▲ from the dock reaches it.
  *
  * Holding OK on an app lifts it ("move mode"): ◀ ▶ slide it along the dock, OK or Back puts
  * it down and saves the order.
@@ -24,6 +33,17 @@ class MainActivity : Activity() {
     private lateinit var dock: GlassView
     private lateinit var moveHint: TextView
     private var dockKeys: List<String>? = null
+    private lateinit var inputBar: GlassView
+    private var shownInputs: List<HdmiInput>? = null
+
+    /** Consoles turning on or off, or devices appearing over HDMI-CEC, update the input bar. */
+    private val inputCallback = object : TvInputManager.TvInputCallback() {
+        override fun onInputStateChanged(inputId: String, state: Int) = refreshInputs()
+        override fun onInputAdded(inputId: String) = refreshInputs()
+        override fun onInputRemoved(inputId: String) = refreshInputs()
+        override fun onInputUpdated(inputId: String) = refreshInputs()
+        override fun onTvInputInfoUpdated(inputInfo: TvInputInfo) = refreshInputs()
+    }
 
     /** The tile being moved, or null when not in move mode. */
     private var moving: View? = null
@@ -39,7 +59,19 @@ class MainActivity : Activity() {
         findViewById<ImageView>(R.id.wallpaper).setImageBitmap(wallpaper.background)
         dock = findViewById(R.id.dock)
         dock.glass = wallpaper.glass
+        inputBar = findViewById(R.id.inputs)
+        inputBar.glass = wallpaper.glass
         moveHint = findViewById(R.id.move_hint)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Inputs.manager(this)?.registerCallback(inputCallback, Handler(Looper.getMainLooper()))
+    }
+
+    override fun onStop() {
+        Inputs.manager(this)?.unregisterCallback(inputCallback)
+        super.onStop()
     }
 
     override fun onResume() {
@@ -47,6 +79,7 @@ class MainActivity : Activity() {
         // Home apps may have changed in More apps, or an app was uninstalled.
         val apps = Apps.forKeys(this, HomeApps.load(this))
         if (apps.map { it.key } != dockKeys) buildDock(apps)
+        refreshInputs()
     }
 
     override fun onPause() {
@@ -175,9 +208,59 @@ class MainActivity : Activity() {
         })
     }
 
+    /** Rebuilds the input bar (top right) if the HDMI inputs or their on/standby state changed. */
+    private fun refreshInputs() {
+        val inputs = Inputs.hdmi(this)
+        if (inputs == shownInputs) return
+        shownInputs = inputs
+
+        val focusedId = inputBar.focusedChild?.tag
+        inputBar.removeViews(1, inputBar.childCount - 1) // keep the gamepad icon
+        val segments = inputs.mapIndexed { i, input ->
+            if (i > 0) layoutInflater.inflate(R.layout.input_divider, inputBar, true)
+            makeInputSegment(input).also(inputBar::addView)
+        }
+        // ◀ on the first and ▶ on the last stay in the bar instead of dropping to the dock.
+        segments.firstOrNull()?.let { it.nextFocusLeftId = it.id }
+        segments.lastOrNull()?.let { it.nextFocusRightId = it.id }
+        inputBar.visibility = if (inputs.isEmpty()) View.GONE else View.VISIBLE
+        segments.firstOrNull { it.tag == focusedId }?.requestFocus()
+    }
+
+    private fun makeInputSegment(input: HdmiInput): View {
+        val segment = layoutInflater.inflate(R.layout.input_segment, inputBar, false)
+        segment.id = View.generateViewId()
+        segment.tag = input.id
+        segment.findViewById<TextView>(R.id.label).text = input.label
+        val dot = segment.findViewById<View>(R.id.dot)
+        val paintDot = { focused: Boolean ->
+            dot.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(when {
+                    input.on -> Color.rgb(0x4A, 0xDE, 0x80)
+                    focused -> Color.argb(77, 0, 0, 0)
+                    else -> Color.argb(90, 255, 255, 255)
+                })
+            }
+        }
+        paintDot(false)
+        segment.setOnFocusChangeListener { _, hasFocus -> paintDot(hasFocus) }
+        segment.setOnClickListener {
+            try {
+                startActivity(input.intent())
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, getString(R.string.input_failed, input.label), Toast.LENGTH_SHORT).show()
+            }
+        }
+        return segment
+    }
+
     @Suppress("DEPRECATION")
     private fun makeMoreButton(parent: ViewGroup): View {
         val more = layoutInflater.inflate(R.layout.more_button, parent, false)
+        // ▶ on the last button would otherwise jump up to the input bar.
+        more.id = View.generateViewId()
+        more.nextFocusRightId = more.id
         more.setOnClickListener {
             startActivity(Intent(this, AppsActivity::class.java))
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)

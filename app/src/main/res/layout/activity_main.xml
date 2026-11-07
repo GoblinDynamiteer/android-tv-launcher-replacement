@@ -45,6 +45,29 @@
             android:textSize="19sp" />
     </LinearLayout>
 
+    <!-- HDMI inputs (design/inputs-mockups.html, I2): gamepad icon, then one segment per input. -->
+    <se.kampe.tvlauncher.GlassView
+        android:id="@+id/inputs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="26dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="9dp"
+            android:layout_marginEnd="6dp"
+            android:alpha="0.75"
+            android:contentDescription="@string/inputs"
+            android:src="@drawable/ic_gamepad" />
+    </se.kampe.tvlauncher.GlassView>
+
     <se.kampe.tvlauncher.GlassView
         android:id="@+id/dock"
         android:layout_width="wrap_content"
