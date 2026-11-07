@@ -7,8 +7,8 @@
 #   ./tv.sh deploy       build + install + start
 #   ./tv.sh shot [file]  save a screenshot of the TV (default build/shot.png)
 #   ./tv.sh log          follow logcat for the launcher
-#   ./tv.sh home on      make the launcher the TV's default home app
-#   ./tv.sh home off     give Home back to Google's stock launcher
+#   ./tv.sh home on      make the launcher the default home (disables Google's)
+#   ./tv.sh home off     re-enable Google's launcher and give Home back to it
 #   ./tv.sh home         show which app the Home button opens
 #
 # Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
@@ -96,16 +96,27 @@ current_home() {
         -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -1
 }
 
+# Google's launcher declares its HOME filter with priority 2, which beats any
+# preferred home app, so `home on` has to disable it (`home off` re-enables it).
+# FallbackHome (com.android.tv.settings) stays as the safety net.
 home() {
     connect
-    local target
+    local stock_pkg="${STOCK_HOME%%/*}"
     case "${1:-}" in
-        on) target="$PKG/$ACTIVITY" ;;
-        off) target="$STOCK_HOME" ;;
-        "") echo "Home opens: $(current_home)"; return ;;
+        on)
+            adb -s "$SERIAL" shell pm path "$PKG" >/dev/null 2>&1 ||
+                die "$PKG is not installed; run ./tv.sh install first."
+            adb -s "$SERIAL" shell pm disable-user --user 0 "$stock_pkg"
+            adb -s "$SERIAL" shell cmd package set-home-activity --user 0 "$PKG/$ACTIVITY"
+            echo "Undo: ./tv.sh home off  (or: adb shell pm enable $stock_pkg)"
+            ;;
+        off)
+            adb -s "$SERIAL" shell pm enable "$stock_pkg"
+            adb -s "$SERIAL" shell cmd package set-home-activity --user 0 "$STOCK_HOME"
+            ;;
+        "") ;;
         *) die "Usage: ./tv.sh home [on|off]" ;;
     esac
-    adb -s "$SERIAL" shell cmd package set-home-activity --user 0 "$target"
     echo "Home opens: $(current_home)"
 }
 
