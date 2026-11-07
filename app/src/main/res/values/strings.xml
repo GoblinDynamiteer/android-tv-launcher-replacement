@@ -16,6 +16,9 @@
     <string name="hue_off">Lights off</string>
     <string name="hue_failed">Hue bridge didn\'t respond</string>
     <string name="hue_off_short">Off</string>
+    <string name="hue_all_off">All lights off or back on</string>
+    <string name="hue_all_off_done">All lights off</string>
+    <string name="hue_all_on_done">Lights back on</string>
     <!-- "Lights off" as a favourite in the bar, e.g. "Windows Lit off". -->
     <string name="hue_group_off">%1$s off</string>
     <string name="hue_favourite_added">%1$s added to favourites</string>

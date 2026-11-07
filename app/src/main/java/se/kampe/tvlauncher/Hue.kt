@@ -77,6 +77,43 @@ class Hue(private val context: Context) {
 
     fun off(lightsId: String) = put("grouped_light/$lightsId", JSONObject().put("on", JSONObject().put("on", false)))
 
+    /**
+     * The power button: if any light is on, remembers which and switches every light off.
+     * Otherwise switches the remembered lights back on (Hue lamps keep their last colour and
+     * brightness), or all lights if none are remembered. Returns true if it switched off.
+     */
+    fun toggleAll(): Boolean {
+        val on = get("light").filter { it.optJSONObject("on")?.optBoolean("on") == true }.map { it.getString("id") }
+        if (on.isNotEmpty()) {
+            prefs.edit().putString("restore", on.joinToString(",")).apply()
+            off(homeLightsId())
+            return true
+        }
+        val restore = prefs.getString("restore", "").orEmpty().split(",").filter { it.isNotEmpty() }
+        if (restore.isEmpty()) {
+            put("grouped_light/${homeLightsId()}", JSONObject().put("on", JSONObject().put("on", true)))
+        } else {
+            for (id in restore) {
+                try {
+                    put("light/$id", JSONObject().put("on", JSONObject().put("on", true)))
+                } catch (e: IOException) {
+                    Log.w(TAG, "Light $id: $e") // e.g. removed from the bridge since
+                }
+                Thread.sleep(100) // Hue: about 10 light commands per second
+            }
+        }
+        prefs.edit().remove("restore").apply()
+        return false
+    }
+
+    /** The grouped_light of the bridge's home: all lights in all rooms. */
+    private fun homeLightsId(): String {
+        val home = get("bridge_home").firstOrNull() ?: throw IOException("No bridge_home")
+        return home.getJSONArray("services").objects()
+            .firstOrNull { it.getString("rtype") == "grouped_light" }?.getString("rid")
+            ?: throw IOException("bridge_home has no grouped_light")
+    }
+
     /** Sets a room's brightness in percent; 0 switches it off, anything else also switches it on. */
     fun brightness(lightsId: String, percent: Int) {
         if (percent <= 0) return off(lightsId)

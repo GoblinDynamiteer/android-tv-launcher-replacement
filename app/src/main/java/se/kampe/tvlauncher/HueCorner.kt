@@ -14,7 +14,8 @@ import java.util.concurrent.Executors
 
 /**
  * The Hue corner (top left; design/hue-mockups.html H1 and hue-extras-mockups.html B + F1):
- * a glass bar with the current scene, then the favourite scenes as one-press buttons.
+ * a glass bar with the current scene, the favourite scenes as one-press buttons, and last a
+ * power button that switches every light off, and the same lights back on (see [Hue.toggleAll]).
  *
  * OK on the current scene drops a list: a brightness slider (◀ ▶ change it), then the room's or
  * zone's scenes (◀ ▶ switch room/zone, OK sets a scene, holding OK stars it as a favourite).
@@ -179,10 +180,38 @@ class HueCorner(
             button.setOnClickListener { chooseFavourite(fav.key) }
             bar.addView(button)
         }
+        activity.layoutInflater.inflate(R.layout.input_divider, bar, true)
+        val allOff = activity.layoutInflater.inflate(R.layout.hue_all_off, bar, false)
+        allOff.id = View.generateViewId()
+        allOff.tag = ALL_OFF
+        allOff.setOnClickListener { toggleAll() }
+        bar.addView(allOff)
         collapsing.sync()
         onBarChanged()
         if (focusedId != null) {
             ((0 until bar.childCount).map(bar::getChildAt).firstOrNull { it.tag == focusedId } ?: segment).requestFocus()
+        }
+    }
+
+    /** The power button at the end of the bar: all lights off, or back on as they were. */
+    private fun toggleAll() {
+        if (groups.any { it.on }) {
+            // Switching off: show it right away; switching back on waits for the bridge.
+            groups = groups.map { g -> g.copy(on = false, scenes = g.scenes.map { it.copy(active = false) }) }
+            updateBar()
+        }
+        io.execute {
+            val result = runCatching { hue.toggleAll() }
+            main.post {
+                result.onSuccess { switchedOff ->
+                    val msg = if (switchedOff) R.string.hue_all_off_done else R.string.hue_all_on_done
+                    Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Log.w(TAG, "Hue: $it")
+                    Toast.makeText(activity, R.string.hue_failed, Toast.LENGTH_SHORT).show()
+                }
+                main.postDelayed(::refresh, 1500)
+            }
         }
     }
 
@@ -377,6 +406,8 @@ class HueCorner(
 
     companion object {
         private const val TAG = "HueCorner"
+        /** Tag of the power button, so focus on it survives rebuilding the bar. */
+        private const val ALL_OFF = "all-off"
         /** Favourite key prefix for a room's "Lights off". */
         private const val OFF_PREFIX = "off:"
         /** For scenes without colour data (brightness only). */

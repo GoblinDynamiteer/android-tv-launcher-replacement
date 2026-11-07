@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Last in the Hue bar: every light off, and the same ones back on (Hue.toggleAll). -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="30dp"
+    android:layout_height="30dp"
+    android:background="@drawable/input_segment"
+    android:clickable="true"
+    android:contentDescription="@string/hue_all_off"
+    android:focusable="true"
+    android:padding="7dp"
+    android:src="@drawable/ic_power"
+    android:tint="@color/hue_icon" />
