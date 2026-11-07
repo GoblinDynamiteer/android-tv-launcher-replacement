@@ -5,18 +5,20 @@
 #   ./tv.sh install      install the downloaded APK on the TV
 #   ./tv.sh start        open the launcher on the TV
 #   ./tv.sh deploy       build + install + start
-#   ./tv.sh shot [file]  save a screenshot of the TV (default build/shot.png)
+#   ./tv.sh shot [--no-open] [file]
+#                        screenshot the TV and open it (default build/shots/<time>.png)
 #   ./tv.sh log          follow logcat for the launcher
 #   ./tv.sh home on      make the launcher the default home (disables Google's)
 #   ./tv.sh home off     re-enable Google's launcher and give Home back to it
 #   ./tv.sh home         show which app the Home button opens
 #
 # Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
-# REMOTE (default github).
+# REMOTE (default github), VIEWER (screenshot viewer, default eog).
 set -euo pipefail
 
 SERIAL="${ADB_SERIAL:-192.168.50.126:5555}"
 REMOTE="${REMOTE:-github}"
+VIEWER="${VIEWER:-eog}" # xdg-open would pick Chrome for PNGs here
 PKG=se.kampe.tvlauncher
 ACTIVITY=.MainActivity
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -76,11 +78,19 @@ start() {
 }
 
 shot() {
+    local open=1
+    if [[ "${1:-}" == --no-open ]]; then
+        open=0
+        shift
+    fi
     connect
-    local file="${1:-$ROOT/build/shot.png}"
+    local file="${1:-$ROOT/build/shots/$(date +%Y%m%d-%H%M%S).png}"
     mkdir -p "$(dirname "$file")"
     adb -s "$SERIAL" exec-out screencap -p >"$file"
     echo "$file"
+    if ((open)); then
+        setsid "$VIEWER" "$file" >/dev/null 2>&1 &
+    fi
 }
 
 log() {
@@ -125,7 +135,7 @@ case "${1:-}" in
     install) install ;;
     start) start ;;
     deploy) build && install && start ;;
-    shot) shot "${2:-}" ;;
+    shot) shift; shot "$@" ;;
     log) log ;;
     home) home "${2:-}" ;;
     *) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
