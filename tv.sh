@@ -11,6 +11,8 @@
 #   ./tv.sh home on      make the launcher the default home (disables Google's)
 #   ./tv.sh home off     re-enable Google's launcher and give Home back to it
 #   ./tv.sh home         show which app the Home button opens
+#   ./tv.sh hue-key [file]
+#                        copy the Hue bridge key (default ~/.hue_key) into the launcher
 #
 # Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
 # REMOTE (default github), VIEWER (screenshot viewer, default eog).
@@ -130,6 +132,22 @@ home() {
     echo "Home opens: $(current_home)"
 }
 
+# The key never goes into the repo or a command line: it's piped into the launcher's
+# private files over adb (run-as works because the CI build is a debug build).
+hue_key() {
+    connect
+    local file="${1:-$HOME/.hue_key}"
+    [[ -s "$file" ]] || die "No Hue key in $file."
+    adb -s "$SERIAL" shell pm path "$PKG" >/dev/null 2>&1 ||
+        die "$PKG is not installed; run ./tv.sh install first."
+    tr -d '[:space:]' <"$file" |
+        adb -s "$SERIAL" shell "run-as $PKG sh -c 'mkdir -p files && cat > files/hue_key'"
+    local size
+    size="$(adb -s "$SERIAL" shell "run-as $PKG wc -c files/hue_key" | awk '{print $1}')"
+    [[ "$size" -gt 0 ]] || die "Copying the key failed."
+    echo "Hue key copied to $PKG ($size bytes). Remove: adb shell run-as $PKG rm files/hue_key"
+}
+
 case "${1:-}" in
     build) build ;;
     install) install ;;
@@ -138,5 +156,6 @@ case "${1:-}" in
     shot) shift; shot "$@" ;;
     log) log ;;
     home) home "${2:-}" ;;
+    hue-key) hue_key "${2:-}" ;;
     *) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
 esac
