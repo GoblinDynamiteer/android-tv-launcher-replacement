@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brightness of the shown room/zone, first in the Hue list: ◀ ▶ change it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="32dp"
+    android:layout_marginBottom="3dp"
+    android:background="@drawable/hue_row"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="10dp">
+
+    <ImageView
+        android:layout_width="15dp"
+        android:layout_height="15dp"
+        android:alpha="0.8"
+        android:duplicateParentState="true"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_brightness"
+        android:tint="@color/hue_icon" />
+
+    <se.kampe.tvlauncher.BrightnessBar
+        android:id="@+id/bar"
+        android:layout_width="0dp"
+        android:layout_height="12dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_weight="1"
+        android:duplicateParentState="true" />
+
+    <TextView
+        android:id="@+id/percent"
+        android:layout_width="33dp"
+        android:layout_height="wrap_content"
+        android:duplicateParentState="true"
+        android:fontFamily="sans-serif-light"
+        android:gravity="end"
+        android:includeFontPadding="false"
+        android:textColor="@color/input_label"
+        android:textSize="11.5sp" />
+</LinearLayout>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A favourite scene in the Hue bar: OK sets it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="30dp"
+    android:background="@drawable/input_segment"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="9dp"
+    android:paddingEnd="12dp">
+
+    <se.kampe.tvlauncher.PaletteDot
+        android:id="@+id/dot"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:duplicateParentState="true" />
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:duplicateParentState="true"
+        android:fontFamily="sans-serif-light"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/input_label"
+        android:textSize="12sp" />
+</LinearLayout>

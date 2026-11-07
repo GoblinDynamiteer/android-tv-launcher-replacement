@@ -29,8 +29,18 @@ import kotlin.math.roundToInt
 /** A Hue scene; [colors] are its lights' colours (deduplicated), for the palette dot. */
 data class HueScene(val id: String, val name: String, val colors: List<Int>, val active: Boolean)
 
-/** A room or zone with scenes. [lightsId] is its grouped_light, used to switch it off. */
-data class HueGroup(val id: String, val name: String, val lightsId: String?, val on: Boolean, val scenes: List<HueScene>)
+/**
+ * A room or zone with scenes. [lightsId] is its grouped_light, used for brightness and to
+ * switch it off; [brightness] is in percent (0-100).
+ */
+data class HueGroup(
+    val id: String,
+    val name: String,
+    val lightsId: String?,
+    val on: Boolean,
+    val brightness: Int,
+    val scenes: List<HueScene>,
+)
 
 /**
  * Philips Hue bridge over the local CLIP v2 API. The application key is copied onto the TV
@@ -57,6 +67,7 @@ class Hue(private val context: Context) {
                 name = room.getJSONObject("metadata").getString("name"),
                 lightsId = lightsId,
                 on = lights[id]?.optJSONObject("on")?.optBoolean("on") == true,
+                brightness = lights[id]?.optJSONObject("dimming")?.optDouble("brightness", 0.0)?.roundToInt() ?: 0,
                 scenes = scenes.filter { it.getJSONObject("group").getString("rid") == id }.map(::scene),
             )
         }.filter { it.scenes.isNotEmpty() }.sortedWith(compareByDescending<HueGroup> { it.scenes.size }.thenBy { it.name })
@@ -65,6 +76,29 @@ class Hue(private val context: Context) {
     fun recall(sceneId: String) = put("scene/$sceneId", JSONObject().put("recall", JSONObject().put("action", "active")))
 
     fun off(lightsId: String) = put("grouped_light/$lightsId", JSONObject().put("on", JSONObject().put("on", false)))
+
+    /** Sets a room's brightness in percent; 0 switches it off, anything else also switches it on. */
+    fun brightness(lightsId: String, percent: Int) {
+        if (percent <= 0) return off(lightsId)
+        put(
+            "grouped_light/$lightsId",
+            JSONObject().put("on", JSONObject().put("on", true)).put("dimming", JSONObject().put("brightness", percent)),
+        )
+    }
+
+    /** Scene ids starred in the list (held OK), shown as buttons in the bar. Kept on the TV. */
+    var favourites: List<String>
+        get() = prefs.getString("favourites", "").orEmpty().split(",").filter { it.isNotEmpty() }
+        set(value) = prefs.edit().putString("favourites", value.joinToString(",")).apply()
+
+    /** Stars or unstars [sceneId]. Returns true if it's now a favourite. */
+    fun toggleFavourite(sceneId: String): Boolean {
+        val favs = favourites.toMutableList()
+        val added = !favs.remove(sceneId)
+        if (added) favs.add(sceneId)
+        favourites = favs
+        return added
+    }
 
     /** The room/zone last picked in the menu, so it opens there again. */
     var lastGroup: String?

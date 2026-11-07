@@ -237,15 +237,16 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Links the two top corners: ◀ ▶ move between the Hue bar and the first input, and at the
-     * outer ends focus stays put instead of dropping down to the dock.
+     * Links the two top corners: ◀ ▶ move between the Hue bar's last button and the first
+     * input, and at the outer ends focus stays put instead of dropping down to the dock.
      */
     private fun linkCorners() {
-        val hueSegment = hue.segment.takeIf { (it.parent as View).visibility == View.VISIBLE }
         val firstInput = inputBar.getChildAt(1)?.takeIf { inputBar.visibility == View.VISIBLE }
+        val hueLast = hue.lastSegment
         hue.segment.nextFocusLeftId = hue.segment.id
-        hue.segment.nextFocusRightId = firstInput?.id ?: hue.segment.id
-        firstInput?.nextFocusLeftId = hueSegment?.id ?: firstInput?.id ?: View.NO_ID
+        hue.segment.nextFocusRightId = View.NO_ID // to the first favourite, if any
+        hueLast.nextFocusRightId = firstInput?.id ?: hueLast.id
+        firstInput?.nextFocusLeftId = if (hue.isVisible) hueLast.id else firstInput?.id ?: View.NO_ID
     }
 
     private fun makeInputSegment(input: HdmiInput): View {

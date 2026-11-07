@@ -15,6 +15,10 @@
     <string name="hue">Hue scenes</string>
     <string name="hue_off">Lights off</string>
     <string name="hue_failed">Hue bridge didn\'t respond</string>
+    <string name="hue_off_short">Off</string>
+    <string name="hue_favourite_added">%1$s added to favourites</string>
+    <string name="hue_favourite_removed">%1$s removed from favourites</string>
+    <string name="percent">%1$d %%</string>
     <string name="check">✓</string>
     <string name="chevron_down">▾</string>
     <string name="arrow_left">◀</string>

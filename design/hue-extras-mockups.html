@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hue Extras Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --page: #0b0c10; --text: #e8e8ec; --muted: #9a9cab; --line: #23252e; --glass-a: 0.10; --glass-blur: 28px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 Roboto, system-ui, sans-serif; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-weight: 400; font-size: 28px; margin: 0 0 4px; }
+  h2 { font-weight: 500; font-size: 20px; margin: 48px 0 4px; }
+  p.lead, .desc { color: var(--muted); margin: 0 0 16px; max-width: 82ch; }
+  .desc b, .lead b { color: var(--text); font-weight: 500; }
+  kbd { font: 12px Roboto, sans-serif; padding: 1px 6px; border: 1px solid #3a3d4a; border-radius: 4px; color: var(--text); }
+  .frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; margin-top: 16px;
+           box-shadow: 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,.5); }
+  .frame.active { box-shadow: 0 0 0 2px #6b7cff, 0 20px 60px rgba(0,0,0,.5); }
+  .tv { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+        transform: scale(var(--k, .5)); overflow: hidden; color: #fff; font-family: Roboto, sans-serif; }
+  .bg { position: absolute; inset: -40px; background: url(assets/bg.jpg) center / cover;
+        filter: brightness(.55) saturate(.7) blur(14px); transition: filter .3s; }
+  .shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.45)); }
+  .glass { background: rgba(255,255,255,var(--glass-a)); backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+           border: 1px solid rgba(255,255,255,.16);
+           box-shadow: 0 10px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12); }
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .open .dim { opacity: 1; }
+
+  /* Home screen (layout D) with the input bar from I2. */
+  .clock { position: absolute; left: 0; right: 0; top: 184px; text-align: center; }
+  .time { font-size: 210px; font-weight: 100; letter-spacing: -6px; line-height: 1; }
+  .date { font-size: 38px; font-weight: 300; opacity: .8; margin-top: 12px; }
+  .pill { position: absolute; left: 50%; top: 640px; transform: translateX(-50%); display: flex; align-items: center;
+          gap: 22px; padding: 22px 26px; border-radius: 999px; }
+  .ban { width: 240px; height: 135px; border-radius: 68px; overflow: hidden; }
+  .ban img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .round { width: 135px; height: 135px; border-radius: 50%; background: rgba(255,255,255,.1);
+           display: flex; align-items: center; justify-content: center; }
+  .dots { width: 44px; height: 44px; }
+  .ico { width: 40px; height: 40px; flex: none; }
+  .bar { position: absolute; top: 52px; display: flex; align-items: center; gap: 6px; padding: 8px; border-radius: 999px; }
+  .bar.right { right: 64px; }
+  .bar.left { left: 64px; }
+  .cap { display: flex; align-items: center; padding: 0 12px 0 18px; opacity: .75; }
+  .seg { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 24px 0 18px; border-radius: 999px;
+         font-size: 24px; font-weight: 300; white-space: nowrap; transition: background .15s, color .15s; }
+  .seg.focused { background: rgba(255,255,255,.92); color: #111; font-weight: 400; }
+  .gdot { width: 12px; height: 12px; border-radius: 50%; background: #4ade80; }
+  .gdot.idle { background: rgba(255,255,255,.35); }
+  .div { width: 1px; height: 34px; background: rgba(255,255,255,.2); }
+
+  /* Scene palette: a little disc of the scene's colours. */
+  .pal { width: 26px; height: 26px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+  .seg.focused .pal { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+  .chev { font-size: 20px; opacity: .6; margin-left: -2px; }
+  .on-mark { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .8; margin-left: 2px; }
+
+  /* H1 dropdown. */
+  .drop { position: absolute; left: 64px; top: 146px; width: 520px; border-radius: 36px; padding: 18px;
+          opacity: 0; transform: translateY(-12px); transition: opacity .18s, transform .18s; pointer-events: none; }
+  .open .drop { opacity: 1; transform: none; }
+  .drop .head { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px 14px; font-size: 22px; }
+  .drop .head .g { letter-spacing: 3px; text-transform: uppercase; opacity: .7; font-size: 19px; }
+  .drop .head .arr { opacity: .55; font-size: 18px; }
+  .drop .list { max-height: 640px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 18px; height: 64px; padding: 0 20px; border-radius: 22px; font-size: 25px; font-weight: 300; }
+  .row .pal { width: 30px; height: 30px; }
+  .row .nm { flex: 1; }
+  .row .chk { font-size: 22px; opacity: .85; }
+  .row.focused { background: rgba(255,255,255,.92); color: #111; font-weight: 400; }
+  .row.off .pal { background: #222 !important; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+  .sep { height: 1px; background: rgba(255,255,255,.14); margin: 8px 14px; }
+
+  /* H3 sheet. */
+  .sheet { position: absolute; left: 64px; right: 64px; top: 146px; border-radius: 40px; padding: 34px 40px 40px;
+           opacity: 0; transform: translateY(-16px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  .open .sheet { opacity: 1; transform: none; }
+  .tabs { display: flex; gap: 10px; margin-bottom: 28px; }
+  .tab { padding: 10px 24px; border-radius: 999px; font-size: 22px; font-weight: 300; opacity: .6; }
+  .tab.cur { background: rgba(255,255,255,.16); opacity: 1; font-weight: 400; }
+  .cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 22px; }
+  .card { position: relative; height: 150px; border-radius: 26px; padding: 18px 20px; display: flex; align-items: flex-end;
+          font-size: 23px; font-weight: 400; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); transition: transform .15s, box-shadow .15s; }
+  .card.focused { transform: scale(1.06); box-shadow: 0 0 0 4px rgba(255,255,255,.92), 0 14px 40px rgba(0,0,0,.5); z-index: 2; }
+  .card .chk { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; background: #fff; color: #111;
+               display: flex; align-items: center; justify-content: center; font-size: 20px; text-shadow: none; }
+  .card.off { background: #1a1b20; box-shadow: inset 0 0 0 2px rgba(255,255,255,.18); }
+
+  .toast { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); padding: 14px 26px; border-radius: 999px;
+           font-size: 24px; background: rgba(20,20,26,.85); border: 1px solid rgba(255,255,255,.2); opacity: 0; transition: opacity .2s; }
+  .toast.show { opacity: 1; }
+  .notes { margin-top: 56px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
+  .notes li { margin: 6px 0; max-width: 90ch; }
+  .notes b { color: var(--text); font-weight: 500; }
+
+  .drop { opacity: 1; transform: none; pointer-events: auto; display: none; }
+  .open .drop { display: block; }
+  .drop .list { max-height: none; }
+  /* Brightness slider row. */
+  .slider { display: flex; align-items: center; gap: 16px; height: 64px; padding: 0 20px; border-radius: 22px; margin-bottom: 6px; }
+  .slider .sun { width: 30px; height: 30px; opacity: .8; flex: none; }
+  .slider .track { position: relative; flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.18); }
+  .slider .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgba(255,255,255,.9); }
+  .slider .knob { position: absolute; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%;
+                  background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .slider .pct { width: 66px; text-align: right; font-size: 23px; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .slider.focused { background: rgba(255,255,255,.92); color: #111; }
+  .slider.focused .track { background: rgba(0,0,0,.15); }
+  .slider.focused .fill, .slider.focused .knob { background: #111; }
+  .slider.focused .arrows { opacity: .6; }
+  .slider .arrows { font-size: 16px; opacity: 0; width: 0; overflow: visible; white-space: nowrap; margin-left: -6px; }
+  .slider.off { opacity: .5; }
+  .star { width: 24px; height: 24px; flex: none; color: #ffd166; }
+  .row.focused .star { color: #b07d00; }
+  .sub { padding: 10px 20px 6px; font-size: 17px; letter-spacing: 3px; text-transform: uppercase; opacity: .55; }
+  .row .room { font-size: 18px; opacity: .55; margin-left: 8px; }
+  .row.focused .room { opacity: .6; }
+  .holdhint { position: absolute; left: 64px; bottom: 60px; font-size: 21px; color: rgba(255,255,255,.7); display: flex; gap: 26px; }
+  .holdhint b { display: inline-block; padding: 1px 10px; margin-right: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.35); font-weight: 400; font-size: 18px; }
+  .sending { position: absolute; left: 600px; top: 190px; font-size: 20px; opacity: 0; transition: opacity .2s; color: rgba(255,255,255,.75); }
+  .sending.show { opacity: 1; }
+  .bar .fav .pal { width: 24px; height: 24px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Hue: brightness and favourites</h1>
+  <p class="lead">Additions to the Hue corner (H1, as built). Your real rooms, zones, scenes and colours.
+    <b>Click a frame, then use the arrow keys.</b> <kbd>Enter</kbd> = OK, <b>hold <kbd>Enter</kbd></b> (or press
+    <kbd>F</kbd>) to star or unstar a scene, <kbd>Esc</kbd> = Back. Relax and Movie Night start as favourites.</p>
+
+  <h2>B · Brightness slider in the list</h2>
+  <p class="desc">A slider sits under the room name. On it, <kbd>◀ ▶</kbd> change the brightness in 10 % steps;
+    the value is sent once you pause, so holding the key doesn't flood the bridge. On a scene, <kbd>◀ ▶</kbd> still
+    switch room. Greyed out while the room is off; turning it up switches it on. A star marks favourites.</p>
+  <div class="frame"><div class="tv" id="b"></div></div>
+
+  <h2>F1 · Favourites in the bar</h2>
+  <p class="desc">Starred scenes become one-press buttons next to the current scene. <kbd>OK</kbd> on a favourite sets
+    it at once; <kbd>OK</kbd> on the current scene opens the list (with the slider) as before. The bar grows by one
+    segment per favourite, so it works best with two or three.</p>
+  <div class="frame"><div class="tv" id="f1"></div></div>
+
+  <h2>F2 · Favourites at the top of the list</h2>
+  <p class="desc">The bar stays as it is. The list starts with a <b>Favourites</b> section across all rooms (with the
+    room's name after each), then the room header, slider and its scenes. Two presses for a favourite, but the
+    home screen stays calm however many you star.</p>
+  <div class="frame"><div class="tv" id="f2"></div></div>
+
+  <div class="notes">
+    <ul>
+      <li><b>My suggestion:</b> B in either case, plus F1 if you'll use two or three favourites every evening;
+        F2 if you'd rather keep the home screen minimal or star many.</li>
+      <li><b>Favourites are kept on the TV</b> (the Hue API doesn't expose the Hue app's own favourites). A starred
+        scene that's deleted in the Hue app simply disappears.</li>
+      <li><b>Brightness</b> applies to the whole room or zone (all its lights), like the room slider in the Hue app.
+        The bar's dot doesn't change; the slider shows the current value when the list opens.</li>
+    </ul>
+  </div>
+</div>
+<script>
+  const GROUPS = [{"name": "Lounge Colors", "type": "zone", "scenes": [{"name": "Dreamy dusk", "active": false, "cols": [{"xy": [0.442, 0.281]}, {"xy": [0.558, 0.331]}, {"xy": [0.519, 0.392]}, {"xy": [0.5, 0.293]}]}, {"name": "Arise", "active": false, "cols": [{"xy": [0.347, 0.348]}, {"xy": [0.367, 0.363]}, {"xy": [0.427, 0.405]}, {"xy": [0.385, 0.374]}]}, {"name": "Shine", "active": false, "cols": [{"xy": [0.424, 0.404]}, {"xy": [0.495, 0.419]}, {"xy": [0.521, 0.418]}, {"xy": [0.473, 0.417]}]}, {"name": "Nightlight", "active": false, "cols": [{"xy": [0.561, 0.404]}]}, {"name": "Read", "active": false, "cols": [{"ct": 346}]}, {"name": "Sleepy", "active": false, "cols": [{"xy": [0.644, 0.321]}, {"xy": [0.598, 0.359]}, {"xy": [0.527, 0.409]}, {"xy": [0.62, 0.325]}]}, {"name": "Narcissa", "active": false, "cols": [{"xy": [0.476, 0.448]}, {"xy": [0.445, 0.456]}, {"xy": [0.592, 0.383]}, {"xy": [0.485, 0.454]}]}, {"name": "Unwind", "active": false, "cols": [{"xy": [0.511, 0.419]}, {"xy": [0.58, 0.379]}, {"xy": [0.559, 0.401]}, {"xy": [0.485, 0.419]}]}, {"name": "Galaxy", "active": false, "cols": [{"xy": [0.441, 0.279]}, {"xy": [0.484, 0.261]}, {"xy": [0.535, 0.329]}, {"xy": [0.484, 0.28]}]}, {"name": "Movie Night", "active": false, "cols": [{"xy": [0.58, 0.375]}, {"xy": [0.65, 0.335]}, {"xy": [0.67, 0.32]}, {"xy": [0.691, 0.308]}]}, {"name": "Nighttime", "active": false, "cols": [{"xy": [0.645, 0.329]}, {"xy": [0.618, 0.352]}, {"xy": [0.658, 0.302]}, {"xy": [0.582, 0.381]}]}, {"name": "Rolling hills", "active": true, "cols": [{"xy": [0.501, 0.401]}, {"xy": [0.48, 0.396]}, {"xy": [0.524, 0.403]}, {"xy": [0.579, 0.379]}]}, {"name": "Concentrate", "active": false, "cols": [{"ct": 233}]}, {"name": "Relax", "active": false, "cols": [{"ct": 447}]}, {"name": "Storybook", "active": false, "cols": [{"xy": [0.437, 0.409]}, {"xy": [0.511, 0.419]}, {"xy": [0.54, 0.412]}, {"xy": [0.46, 0.415]}]}, {"name": "Energize", "active": false, "cols": [{"ct": 156}]}], "bri": 45}, {"name": "Vardagsrum", "type": "room", "scenes": [{"name": "Windows", "active": false, "cols": [{"ct": 400}]}, {"name": "Light Purple", "active": false, "cols": [{"xy": [0.252, 0.148]}]}], "bri": 45}, {"name": "Windows Lit", "type": "zone", "scenes": [{"name": "All Lit", "active": false, "cols": [{"ct": 399}]}], "bri": 0}, {"name": "Sovrum", "type": "room", "scenes": [{"name": "Default: Star Only", "active": false, "cols": []}, {"name": "Cleaning Mode", "active": false, "cols": []}], "bri": 0}, {"name": "On/Off Switch", "type": "zone", "scenes": [{"name": "Dimmed", "active": false, "cols": []}, {"name": "Bright", "active": false, "cols": []}, {"name": "Nightlight", "active": false, "cols": []}], "bri": 0}];
+  const IMG = ['assets/plex.png', 'assets/youtube.png', 'assets/svtplay.png'];
+  const PAD = '<svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M21.58 16.09l-1.09-7.66C20.21 6.46 18.52 5 16.53 5H7.47C5.48 5 3.79 6.46 3.51 8.43l-1.09 7.66C2.2 17.63 3.39 19 4.94 19c.68 0 1.32-.27 1.8-.75L9 16h6l2.25 2.25c.48.48 1.13.75 1.8.75 1.56 0 2.75-1.37 2.53-2.91zM11 11H9v2H8v-2H6v-1h2V8h1v2h2v1zm4-1c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>';
+  // Material Icons "lightbulb" (Apache 2.0).
+  const BULB = '<svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>';
+  const DOTS = '<svg class="dots" viewBox="0 0 24 24" fill="currentColor">' +
+    [5, 12, 19].flatMap(y => [5, 12, 19].map(x => `<circle cx="${x}" cy="${y}" r="2.2"/>`)).join('') + '</svg>';
+
+  // Hue colours to CSS: CIE xy (Philips' wide gamut matrix) and colour temperature in mirek.
+  const gamma = c => c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  function xyRgb([x, y]) {
+    const X = x / y, Z = (1 - x - y) / y;
+    let r = X * 1.656492 - 0.354851 - Z * 0.255038, g = -X * 0.707196 + 1.655397 + Z * 0.036152,
+        b = X * 0.051713 - 0.121364 + Z * 1.011530;
+    [r, g, b] = [r, g, b].map(v => Math.max(0, v));
+    const m = Math.max(r, g, b);
+    return [r, g, b].map(v => Math.round(255 * Math.min(1, gamma(v / m))));
+  }
+  function ctRgb(mirek) {
+    const t = 1e6 / mirek / 100;
+    const r = t <= 66 ? 255 : 329.7 * Math.pow(t - 60, -0.1332);
+    const g = t <= 66 ? 99.47 * Math.log(t) - 161.12 : 288.1 * Math.pow(t - 60, -0.0755);
+    const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5 * Math.log(t - 10) - 305.04;
+    return [r, g, b].map(v => Math.round(Math.max(0, Math.min(255, v))));
+  }
+  const css = c => `rgb(${(c.xy ? xyRgb(c.xy) : ctRgb(c.ct)).join(',')})`;
+  const palette = s => {
+    const cols = s.cols.length ? s.cols.map(css) : ['#fff3dc'];
+    if (cols.length === 1) return cols[0];
+    return `conic-gradient(${cols.map((c, i) => `${c} ${i / cols.length * 100}% ${(i + 1) / cols.length * 100}%`).join(',')})`;
+  };
+  const cardBg = s => {
+    const cols = s.cols.length ? s.cols.map(css) : ['#fff3dc'];
+    const c = cols.length === 1 ? [cols[0], cols[0]] : cols;
+    // A dark fade at the bottom keeps the white name readable on pale scenes.
+    return `linear-gradient(to top, rgba(0,0,0,.5), rgba(0,0,0,0) 65%), linear-gradient(135deg, ${c.join(',')})`;
+  };
+
+  const SUN = '<svg class="sun" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>';
+  const STAR = '<svg class="star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+
+  // Shared state for all frames.
+  let cur = { g: 0, s: GROUPS[0].scenes.findIndex(s => s.active) };
+  const key = (g, s) => `${g}:${s}`;
+  const favs = ['Relax', 'Movie Night'].map(n => key(0, GROUPS[0].scenes.findIndex(s => s.name === n)));
+  const isFav = (g, s) => favs.includes(key(g, s));
+  const toggleFav = (g, s) => { const k = key(g, s), i = favs.indexOf(k); i >= 0 ? favs.splice(i, 1) : favs.push(k); };
+  const sceneOf = k => { const [g, s] = k.split(':').map(Number); return { g, s, scene: GROUPS[g].scenes[s] }; };
+
+  const home = (left) => `
+    <div class="bg"></div><div class="shade"></div>
+    <div class="clock"><div class="time">17:52</div><div class="date">lördag 7 november</div></div>
+    <div class="bar glass right"><span class="cap">${PAD}</span>
+      <div class="seg"><span class="gdot idle"></span>PlayStation 5</div><div class="div"></div>
+      <div class="seg"><span class="gdot"></span>Steam Machine</div></div>
+    <div class="pill glass">${IMG.map(src => `<div class="ban"><img src="${src}" alt=""></div>`).join('')}
+      <div class="round">${DOTS}</div></div>
+    <div class="dim"></div>${left}
+    <div class="sending"></div>
+    <div class="holdhint"><span><b>Hold OK</b>star / unstar</span><span><b>◀ ▶</b>brightness on the slider</span></div>
+    <div class="toast"></div>`;
+  const toast = (tv, text) => {
+    const t = tv.querySelector('.toast'); t.textContent = text; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1600);
+  };
+  const curLabel = () => cur.s < 0 ? 'Lights off' : GROUPS[cur.g].scenes[cur.s].name;
+  const curPal = () => cur.s < 0 ? '#222' : palette(GROUPS[cur.g].scenes[cur.s]);
+
+  // Each frame: { open, g, items: [...], i } where items are built per render.
+  const frames = {};
+  function makeFrame(id, mode) {
+    const tv = document.getElementById(id);
+    tv.innerHTML = home('<div class="bar glass left"></div><div class="drop glass"></div>');
+    frames[id] = { tv, mode, open: false, g: 0, i: 0, bar: 0, items: [] };
+  }
+
+  function rowHtml(f, item, focused) {
+    if (item.type === 'slider') {
+      const g = GROUPS[item.g], on = g.bri > 0;
+      return `<div class="slider ${focused ? 'focused' : ''} ${on ? '' : 'off'}">${SUN}
+        <div class="track"><div class="fill" style="width:${g.bri}%"></div><div class="knob" style="left:${g.bri}%"></div></div>
+        <span class="pct">${on ? g.bri + ' %' : 'Off'}</span></div>`;
+    }
+    if (item.type === 'sub') return `<div class="sub">${item.text}</div>`;
+    if (item.type === 'sep') return '<div class="sep"></div>';
+    if (item.type === 'off') return `<div class="row off ${focused ? 'focused' : ''}"><span class="pal"></span><span class="nm">Lights off</span>
+      ${cur.g === item.g && cur.s < 0 ? '<span class="chk">✓</span>' : ''}</div>`;
+    const s = GROUPS[item.g].scenes[item.s];
+    return `<div class="row ${focused ? 'focused' : ''}"><span class="pal" style="background:${palette(s)}"></span>
+      <span class="nm">${s.name}${item.room ? `<span class="room">${GROUPS[item.g].name}</span>` : ''}</span>
+      ${isFav(item.g, item.s) ? STAR : ''}${cur.g === item.g && cur.s === item.s ? '<span class="chk">✓</span>' : ''}</div>`;
+  }
+
+  function buildItems(f) {
+    const items = [];
+    if (f.mode === 'f2' && favs.length) {
+      items.push({ type: 'sub', text: 'Favourites' });
+      favs.forEach(k => { const { g, s } = sceneOf(k); items.push({ type: 'scene', g, s, room: true }); });
+      items.push({ type: 'sep' });
+      items.push({ type: 'head' });
+    }
+    items.push({ type: 'slider', g: f.g });
+    GROUPS[f.g].scenes.forEach((_, s) => items.push({ type: 'scene', g: f.g, s }));
+    items.push({ type: 'sep' }, { type: 'off', g: f.g });
+    f.items = items;
+  }
+  const focusable = it => !['sub', 'sep', 'head'].includes(it.type);
+
+  function render(f) {
+    const { tv } = f;
+    tv.classList.toggle('open', f.open);
+    // Bar.
+    let bar = `<span class="cap">${BULB}</span><div class="seg ${!f.open && f.bar === 0 ? 'focused' : ''}">
+      <span class="pal" style="background:${curPal()}"></span>${curLabel()}<span class="chev">▾</span></div>`;
+    if (f.mode === 'f1') bar += favs.map((k, i) => { const { scene } = sceneOf(k);
+      return `<div class="div"></div><div class="seg fav ${!f.open && f.bar === i + 1 ? 'focused' : ''}">
+        <span class="pal" style="background:${palette(scene)}"></span>${scene.name}</div>`; }).join('');
+    tv.querySelector('.bar.left').innerHTML = bar;
+    if (!f.open) return;
+    buildItems(f);
+    const header = `<div class="head"><span class="arr">◀</span><span class="g">${GROUPS[f.g].name}</span><span class="arr">▶</span></div>`;
+    // Window of rows around the focus so the panel stays on screen.
+    const html = f.items.map((it, i) => it.type === 'head' ? header : rowHtml(f, it, i === f.i));
+    const start = Math.max(0, Math.min(html.length - 11, f.i - 5));
+    tv.querySelector('.drop').innerHTML = (f.items[0].type === 'sub' ? '' : header) +
+      `<div class="list">${html.slice(f.mode === 'f2' ? 0 : start, (f.mode === 'f2' ? 0 : start) + 11).join('')}</div>`;
+  }
+
+  function openList(f) {
+    f.open = true; f.g = Math.max(0, cur.g);
+    buildItems(f);
+    f.i = f.items.findIndex(it => it.type === 'slider');
+  }
+  function move(f, d) {
+    let i = f.i;
+    do { i += d; } while (i >= 0 && i < f.items.length && !focusable(f.items[i]));
+    if (i >= 0 && i < f.items.length) f.i = i;
+  }
+  const pending = {};
+  function nudge(f, d) {
+    const g = GROUPS[f.items[f.i].g];
+    g.bri = Math.max(0, Math.min(100, Math.round(g.bri / 10) * 10 + d * 10));
+    const s = f.tv.querySelector('.sending');
+    s.textContent = 'sending…'; s.style.top = '0'; s.classList.add('show');
+    clearTimeout(pending[f.tv.id]);
+    pending[f.tv.id] = setTimeout(() => { s.classList.remove('show'); toast(f.tv, `${g.name}: brightness ${g.bri ? g.bri + ' %' : 'off'}`); }, 450);
+  }
+  function choose(f, it) {
+    if (it.type === 'off') { cur = { g: it.g, s: -1 }; GROUPS[it.g].bri = 0; toast(f.tv, `${GROUPS[it.g].name}: lights off`); }
+    else { cur = { g: it.g, s: it.s }; if (!GROUPS[it.g].bri) GROUPS[it.g].bri = 100; toast(f.tv, `${GROUPS[it.g].name}: ${GROUPS[it.g].scenes[it.s].name}`); }
+    f.open = false; f.bar = 0;
+  }
+  function star(f) {
+    const it = f.items[f.i];
+    if (!f.open || it.type !== 'scene') return;
+    toggleFav(it.g, it.s);
+    toast(f.tv, `${GROUPS[it.g].scenes[it.s].name} ${isFav(it.g, it.s) ? 'added to' : 'removed from'} favourites`);
+    buildItems(f); f.i = Math.min(f.i, f.items.length - 1); if (!focusable(f.items[f.i])) move(f, 1);
+  }
+  function onKey(f, k) {
+    if (!f.open) {
+      const n = f.mode === 'f1' ? favs.length : 0;
+      if (k === 'ArrowLeft') f.bar = Math.max(0, f.bar - 1);
+      else if (k === 'ArrowRight') f.bar = Math.min(n, f.bar + 1);
+      else if (k === 'Enter') {
+        if (f.bar === 0) openList(f);
+        else { const { g, s } = sceneOf(favs[f.bar - 1]); cur = { g, s }; toast(f.tv, `${GROUPS[g].name}: ${GROUPS[g].scenes[s].name}`); }
+      } else return false;
+      return true;
+    }
+    const it = f.items[f.i];
+    if (k === 'ArrowUp') move(f, -1);
+    else if (k === 'ArrowDown') move(f, 1);
+    else if ((k === 'ArrowLeft' || k === 'ArrowRight') && it.type === 'slider') nudge(f, k === 'ArrowLeft' ? -1 : 1);
+    else if (k === 'ArrowLeft' || k === 'ArrowRight') {
+      f.g = (f.g + (k === 'ArrowLeft' ? -1 : 1) + GROUPS.length) % GROUPS.length;
+      buildItems(f); f.i = f.items.findIndex(x => x.type === 'slider');
+    }
+    else if (k === 'Enter') { if (it.type === 'scene' || it.type === 'off') choose(f, it); }
+    else if (k === 'f' || k === 'F') star(f);
+    else if (k === 'Escape') f.open = false;
+    else return false;
+    return true;
+  }
+
+  makeFrame('b', 'b'); makeFrame('f1', 'f1'); makeFrame('f2', 'f2');
+  const renderAll = () => Object.values(frames).forEach(render);
+  // Static starting views: B with the slider focused, F1 on the bar, F2 with the list open on a favourite.
+  openList(frames.b);
+  openList(frames.f2); frames.f2.i = 1;
+  renderAll();
+
+  const ro = new ResizeObserver(es => es.forEach(e =>
+    e.target.querySelector('.tv').style.setProperty('--k', e.contentRect.width / 1920)));
+  document.querySelectorAll('.frame').forEach(fr => ro.observe(fr));
+  let active = null, holdTimer = null, held = false;
+  document.querySelectorAll('.frame').forEach(fr => fr.addEventListener('click', () => {
+    document.querySelectorAll('.frame').forEach(x => x.classList.remove('active'));
+    fr.classList.add('active'); active = frames[fr.querySelector('.tv').id];
+  }));
+  // Enter: a short press is OK, holding it for half a second stars the scene.
+  document.addEventListener('keydown', e => {
+    if (!active) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.repeat || holdTimer) return;
+      held = false;
+      holdTimer = setTimeout(() => { held = true; star(active); renderAll(); }, 500);
+      return;
+    }
+    if (onKey(active, e.key)) { e.preventDefault(); renderAll(); }
+  });
+  document.addEventListener('keyup', e => {
+    if (!active || e.key !== 'Enter') return;
+    clearTimeout(holdTimer); holdTimer = null;
+    if (!held && onKey(active, 'Enter')) renderAll();
+  });
+</script>
+</body>
+</html>

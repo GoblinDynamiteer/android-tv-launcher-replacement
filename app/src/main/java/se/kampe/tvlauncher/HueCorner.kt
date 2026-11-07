@@ -13,23 +13,27 @@ import android.widget.Toast
 import java.util.concurrent.Executors
 
 /**
- * The Hue corner (top left, design/hue-mockups.html H1): a glass bar with the current scene.
- * OK drops a list of the room's or zone's scenes, ◀ ▶ switch room/zone, OK sets a scene, Back
- * closes. Hidden until the bridge answers, and when there's no key (see `./tv.sh hue-key`).
+ * The Hue corner (top left; design/hue-mockups.html H1 and hue-extras-mockups.html B + F1):
+ * a glass bar with the current scene, then the favourite scenes as one-press buttons.
+ *
+ * OK on the current scene drops a list: a brightness slider (◀ ▶ change it), then the room's or
+ * zone's scenes (◀ ▶ switch room/zone, OK sets a scene, holding OK stars it as a favourite).
+ * Back closes. Hidden until the bridge answers, and when there's no key (`./tv.sh hue-key`).
  */
 class HueCorner(
     private val activity: Activity,
     private val bar: GlassView,
     private val panel: GlassView,
     private val dim: View,
-    /** Called when the bar appears or disappears, to relink focus between the corners. */
-    private val onBarVisibility: () -> Unit,
+    /** Called when the bar's buttons change, to relink focus between the corners. */
+    private val onBarChanged: () -> Unit,
 ) {
     private val hue = Hue(activity)
     private val io = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private val density = activity.resources.displayMetrics.density
 
+    /** The current-scene button, first in the bar. */
     val segment: View = bar.findViewById(R.id.hue_current)
     private val barDot: PaletteDot = bar.findViewById(R.id.hue_dot)
     private val barLabel: TextView = bar.findViewById(R.id.hue_label)
@@ -40,9 +44,18 @@ class HueCorner(
     private var groups: List<HueGroup> = emptyList()
     /** Index in [groups] of the room/zone the open list shows. */
     private var shown = 0
+    private var slider: View? = null
+    /** The room/zone whose brightness is waiting to be sent. */
+    private var brightnessGroup: String? = null
     private var polling = false
+    /** What the bar's favourite buttons were built from, to rebuild only on changes. */
+    private var shownFavourites: List<HueScene>? = null
 
     val isOpen get() = panel.visibility == View.VISIBLE
+    val isVisible get() = bar.visibility == View.VISIBLE
+
+    /** The last button in the bar (◀ from the input bar lands here). */
+    val lastSegment: View get() = bar.getChildAt(bar.childCount - 1)
 
     init {
         panel.cornerRadius = 18 * density
@@ -99,7 +112,7 @@ class HueCorner(
         val v = if (visible) View.VISIBLE else View.GONE
         if (bar.visibility == v) return
         bar.visibility = v
-        onBarVisibility()
+        onBarChanged()
     }
 
     /**
@@ -123,34 +136,69 @@ class HueCorner(
             group?.on == false -> activity.getString(R.string.hue_off)
             else -> group?.name.orEmpty()
         }
-        barDot.colors = scene?.colors?.ifEmpty { listOf(WARM_WHITE) } ?: if (group?.on == true) listOf(WARM_WHITE) else emptyList()
+        barDot.colors = scene?.let(::colorsOf) ?: if (group?.on == true) listOf(WARM_WHITE) else emptyList()
+        updateFavourites()
     }
+
+    /** Rebuilds the favourite buttons after the current scene, if they changed. */
+    private fun updateFavourites() {
+        val scenes = hue.favourites.mapNotNull(::find).map { it.second.copy(active = false) }
+        if (scenes == shownFavourites) return
+        shownFavourites = scenes
+
+        val focusedId = bar.focusedChild?.tag
+        bar.removeViews(2, bar.childCount - 2) // keep the bulb and the current scene
+        for (scene in scenes) {
+            activity.layoutInflater.inflate(R.layout.input_divider, bar, true)
+            val button = activity.layoutInflater.inflate(R.layout.hue_favourite, bar, false)
+            button.id = View.generateViewId()
+            button.tag = scene.id
+            button.findViewById<PaletteDot>(R.id.dot).colors = colorsOf(scene)
+            button.findViewById<TextView>(R.id.label).text = scene.name
+            button.setOnClickListener { find(scene.id)?.let { (g, s) -> choose(g, s) } }
+            bar.addView(button)
+        }
+        onBarChanged()
+        if (focusedId != null) {
+            ((0 until bar.childCount).map(bar::getChildAt).firstOrNull { it.tag == focusedId } ?: segment).requestFocus()
+        }
+    }
+
+    private fun find(sceneId: String): Pair<HueGroup, HueScene>? =
+        groups.firstNotNullOfOrNull { g -> g.scenes.firstOrNull { it.id == sceneId }?.let { g to it } }
 
     private fun open() {
         if (groups.isEmpty()) return
-        val (group, scene) = current()
-        shown = groups.indexOf(group).coerceAtLeast(0)
+        shown = groups.indexOf(current().first).coerceAtLeast(0)
         panel.visibility = View.VISIBLE
         dim.visibility = View.VISIBLE
-        showGroup(scene?.id)
+        showGroup()
     }
 
     fun close(refocus: Boolean = true) {
         if (!isOpen) return
         panel.visibility = View.GONE
         dim.visibility = View.GONE
+        slider = null
         if (refocus) segment.requestFocus()
     }
 
-    /** While the list is open: ◀ ▶ switch room/zone, Back closes. Returns true if handled. */
+    /**
+     * While the list is open: ◀ ▶ change the brightness on the slider and switch room/zone
+     * elsewhere; Back closes. Returns true if handled.
+     */
     fun onKey(event: KeyEvent): Boolean {
         if (!isOpen) return false
         val down = event.action == KeyEvent.ACTION_DOWN
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> if (down) {
                 val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1
-                shown = (shown + step + groups.size) % groups.size
-                showGroup(null)
+                if (slider?.hasFocus() == true) {
+                    nudgeBrightness(step)
+                } else {
+                    shown = (shown + step + groups.size) % groups.size
+                    showGroup()
+                }
             }
             KeyEvent.KEYCODE_BACK -> if (!down) close()
             else -> return false
@@ -158,20 +206,36 @@ class HueCorner(
         return true
     }
 
-    /** Fills the list with the scenes of [shown], focusing [focusId] (else the first). */
-    private fun showGroup(focusId: String?) {
+    /** Fills the list with the slider and the scenes of [shown], focusing the slider. */
+    private fun showGroup() {
         val group = groups[shown]
         groupLabel.text = group.name
         list.removeAllViews()
-        val rows = group.scenes.map { scene ->
-            row(scene.name, scene.colors.ifEmpty { listOf(WARM_WHITE) }, scene.active && group.on) { choose(group, scene) }
-                .also { it.tag = scene.id }
-        }.toMutableList()
-        rows.forEach(list::addView)
+
+        val rows = mutableListOf<View>()
+        if (group.lightsId != null) {
+            val s = activity.layoutInflater.inflate(R.layout.hue_slider, list, false)
+            s.id = View.generateViewId()
+            list.addView(s)
+            rows += s
+            slider = s
+            showBrightness(group)
+        } else {
+            slider = null
+        }
+        for (scene in group.scenes) {
+            val row = row(scene.name, colorsOf(scene), scene.active && group.on, scene.id in hue.favourites)
+            row.setOnClickListener { choose(group, scene) }
+            row.setOnLongClickListener { toggleFavourite(row, scene); true }
+            list.addView(row)
+            rows += row
+        }
         if (group.lightsId != null) {
             activity.layoutInflater.inflate(R.layout.hue_separator, list, true)
-            rows += row(activity.getString(R.string.hue_off), emptyList(), !group.on) { choose(group, null) }
-                .also(list::addView)
+            val off = row(activity.getString(R.string.hue_off), emptyList(), !group.on, false)
+            off.setOnClickListener { choose(group, null) }
+            list.addView(off)
+            rows += off
         }
         // Keep ▲ ▼ inside the list.
         rows.first().let { it.nextFocusUpId = it.id }
@@ -183,18 +247,68 @@ class HueCorner(
             if (rows.size > 9) (8.5f * rowHeight).toInt() else ViewGroup.LayoutParams.WRAP_CONTENT
         scroll.requestLayout()
         scroll.scrollTo(0, 0)
-        (rows.firstOrNull { it.tag == focusId } ?: rows.first()).requestFocus()
+        rows.first().requestFocus()
     }
 
-    private fun row(name: String, colors: List<Int>, checked: Boolean, onClick: () -> Unit): View {
+    private fun row(name: String, colors: List<Int>, checked: Boolean, favourite: Boolean): View {
         val row = activity.layoutInflater.inflate(R.layout.hue_row, list, false)
         row.id = View.generateViewId()
         row.findViewById<TextView>(R.id.name).text = name
         row.findViewById<PaletteDot>(R.id.dot).colors = colors
         row.findViewById<View>(R.id.check).visibility = if (checked) View.VISIBLE else View.GONE
-        row.setOnClickListener { onClick() }
+        row.findViewById<View>(R.id.star).visibility = if (favourite) View.VISIBLE else View.GONE
         return row
     }
+
+    private fun toggleFavourite(row: View, scene: HueScene) {
+        val added = hue.toggleFavourite(scene.id)
+        row.findViewById<View>(R.id.star).visibility = if (added) View.VISIBLE else View.GONE
+        val msg = if (added) R.string.hue_favourite_added else R.string.hue_favourite_removed
+        Toast.makeText(activity, activity.getString(msg, scene.name), Toast.LENGTH_SHORT).show()
+        updateFavourites()
+        row.requestFocus() // rebuilding the bar must not pull focus out of the list
+    }
+
+    // --- Brightness ---------------------------------------------------------------------------
+
+    private fun showBrightness(group: HueGroup) {
+        val s = slider ?: return
+        val percent = if (group.on) group.brightness else 0
+        s.findViewById<BrightnessBar>(R.id.bar).percent = percent
+        s.findViewById<TextView>(R.id.percent).text =
+            if (percent > 0) activity.getString(R.string.percent, percent) else activity.getString(R.string.hue_off_short)
+    }
+
+    /** One 10 % step; sent to the bridge once the key has been still for a moment. */
+    private fun nudgeBrightness(step: Int) {
+        val group = groups[shown]
+        val from = if (group.on) group.brightness else 0
+        val to = ((from + 5) / 10 * 10 + step * 10).coerceIn(0, 100)
+        val updated = group.copy(on = to > 0, brightness = to)
+        groups = groups.map { if (it.id == group.id) updated else it }
+        showBrightness(updated)
+        brightnessGroup = group.id
+        main.removeCallbacks(sendBrightness)
+        main.postDelayed(sendBrightness, 400)
+    }
+
+    private val sendBrightness = Runnable {
+        val group = groups.firstOrNull { it.id == brightnessGroup } ?: return@Runnable
+        val lightsId = group.lightsId ?: return@Runnable
+        val percent = if (group.on) group.brightness else 0
+        io.execute {
+            val result = runCatching { hue.brightness(lightsId, percent) }
+            main.post {
+                result.onFailure {
+                    Log.w(TAG, "Hue: $it")
+                    Toast.makeText(activity, R.string.hue_failed, Toast.LENGTH_SHORT).show()
+                }
+                updateBar()
+            }
+        }
+    }
+
+    // --- Scenes -------------------------------------------------------------------------------
 
     /** Sets [scene] in [group], or switches the group off when [scene] is null. */
     private fun choose(group: HueGroup, scene: HueScene?) {
@@ -217,6 +331,8 @@ class HueCorner(
             }
         }
     }
+
+    private fun colorsOf(scene: HueScene) = scene.colors.ifEmpty { listOf(WARM_WHITE) }
 
     companion object {
         private const val TAG = "HueCorner"
