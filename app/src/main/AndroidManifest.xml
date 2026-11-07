@@ -8,6 +8,7 @@
     <queries>
         <package android:name="com.plexapp.android" />
         <package android:name="com.google.android.youtube.tv" />
+        <package android:name="se.svt.android.svtplay" />
     </queries>
 
     <application

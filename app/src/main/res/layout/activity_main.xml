@@ -1,15 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Layout D from design/mockups.html; mockup px on the 1920 px canvas = dp x 2. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:clipChildren="false">
+
+    <ImageView
+        android:id="@+id/wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
 
     <LinearLayout
-        android:id="@+id/tiles"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        android:orientation="horizontal" />
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="92dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-thin"
+            android:format12Hour="HH:mm"
+            android:format24Hour="HH:mm"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.03"
+            android:textColor="@color/text"
+            android:textSize="105sp" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:alpha="0.8"
+            android:fontFamily="sans-serif-light"
+            android:format12Hour="EEEE d MMMM"
+            android:format24Hour="EEEE d MMMM"
+            android:includeFontPadding="false"
+            android:textColor="@color/text"
+            android:textSize="19sp" />
+    </LinearLayout>
+
+    <se.kampe.tvlauncher.GlassView
+        android:id="@+id/dock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="320dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="7dp"
+        android:paddingVertical="11dp" />
 </FrameLayout>

@@ -7,11 +7,12 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 
-/** Proof of concept: a dark screen with one tile per app in [APPS]. */
+/**
+ * Home screen, layout D ("center stage") from design/mockups.html: muted wallpaper, a large
+ * clock and the apps in one glass pill.
+ */
 class MainActivity : Activity() {
 
     private data class App(val pkg: String, val name: String)
@@ -20,9 +21,14 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val row = findViewById<LinearLayout>(R.id.tiles)
-        APPS.forEach { row.addView(makeTile(row, it)) }
-        row.getChildAt(0)?.requestFocus()
+        val wallpaper = Wallpaper.load(resources, R.drawable.wallpaper)
+        findViewById<ImageView>(R.id.wallpaper).setImageBitmap(wallpaper.background)
+
+        val dock = findViewById<GlassView>(R.id.dock)
+        dock.glass = wallpaper.glass
+        APPS.forEach { app -> makeTile(dock, app)?.let { dock.addView(it) } }
+        dock.addView(makeMoreButton(dock))
+        dock.getChildAt(0)?.requestFocus()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -39,29 +45,37 @@ class MainActivity : Activity() {
         if (!isHome()) super.onBackPressed()
     }
 
-    private fun makeTile(parent: ViewGroup, app: App): View {
-        val tile = layoutInflater.inflate(R.layout.tile, parent, false)
-        val image = tile.findViewById<ImageView>(R.id.tile_image)
-        val label = tile.findViewById<TextView>(R.id.tile_label)
-
-        try {
-            val info = packageManager.getApplicationInfo(app.pkg, 0)
-            // TV apps ship a 16:9 banner; fall back to the square icon.
-            image.setImageDrawable(
-                packageManager.getApplicationBanner(info)
-                    ?: packageManager.getApplicationIcon(info)
-            )
-            label.text = packageManager.getApplicationLabel(info)
+    /** A tile with the app's TV banner, or null if the app isn't installed. */
+    private fun makeTile(parent: ViewGroup, app: App): View? {
+        val info = try {
+            packageManager.getApplicationInfo(app.pkg, 0)
         } catch (e: PackageManager.NameNotFoundException) {
-            label.text = getString(R.string.not_installed, app.name)
+            return null
         }
-
+        val tile = layoutInflater.inflate(R.layout.tile, parent, false) as ImageView
+        tile.setImageDrawable(
+            packageManager.getApplicationBanner(info) ?: packageManager.getApplicationIcon(info)
+        )
+        tile.contentDescription = packageManager.getApplicationLabel(info)
+        tile.clipToOutline = true
         tile.setOnClickListener { launch(app) }
-        tile.setOnFocusChangeListener { v, hasFocus ->
-            val scale = if (hasFocus) 1.08f else 1f
-            v.animate().scaleX(scale).scaleY(scale).setDuration(120).start()
-        }
+        tile.onFocusChangeListener = focusEffect
         return tile
+    }
+
+    private fun makeMoreButton(parent: ViewGroup): View {
+        val more = layoutInflater.inflate(R.layout.more_button, parent, false)
+        more.setOnClickListener {
+            Toast.makeText(this, R.string.more_apps_soon, Toast.LENGTH_SHORT).show()
+        }
+        more.onFocusChangeListener = focusEffect
+        return more
+    }
+
+    private val focusEffect = View.OnFocusChangeListener { v, hasFocus ->
+        val scale = if (hasFocus) 1.07f else 1f
+        val lift = if (hasFocus) 12 * resources.displayMetrics.density else 0f
+        v.animate().scaleX(scale).scaleY(scale).translationZ(lift).setDuration(150).start()
     }
 
     private fun launch(app: App) {
@@ -79,6 +93,7 @@ class MainActivity : Activity() {
         val APPS = listOf(
             App("com.plexapp.android", "Plex"),
             App("com.google.android.youtube.tv", "YouTube"),
+            App("se.svt.android.svtplay", "SVT Play"),
         )
     }
 }
