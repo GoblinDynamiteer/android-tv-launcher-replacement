@@ -24,3 +24,6 @@ keystore.properties
 
 # OS
 .DS_Store
+
+# APK backups pulled from the TV by debloat.sh
+backup/
