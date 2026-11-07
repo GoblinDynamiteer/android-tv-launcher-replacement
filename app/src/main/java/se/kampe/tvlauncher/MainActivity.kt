@@ -1,6 +1,7 @@
 package se.kampe.tvlauncher
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -22,6 +23,20 @@ class MainActivity : Activity() {
         val row = findViewById<LinearLayout>(R.id.tiles)
         APPS.forEach { row.addView(makeTile(row, it)) }
         row.getChildAt(0)?.requestFocus()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // keep isHome() current when Home brings us back
+    }
+
+    /** Started by the Home button (not from another launcher's app list). */
+    private fun isHome() = intent?.hasCategory(Intent.CATEGORY_HOME) == true
+
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onBackPressed() {
+        // A home screen has nothing to go back to.
+        if (!isHome()) super.onBackPressed()
     }
 
     private fun makeTile(parent: ViewGroup, app: App): View {

@@ -17,7 +17,7 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.Launcher">
 
-        <!-- No HOME category yet: for now it is an ordinary app next to the stock launcher. -->
+        <!-- A home screen candidate; `./tv.sh home on` makes it the default. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,6 +25,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
     </application>

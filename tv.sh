@@ -7,6 +7,9 @@
 #   ./tv.sh deploy       build + install + start
 #   ./tv.sh shot [file]  save a screenshot of the TV (default build/shot.png)
 #   ./tv.sh log          follow logcat for the launcher
+#   ./tv.sh home on      make the launcher the TV's default home app
+#   ./tv.sh home off     give Home back to Google's stock launcher
+#   ./tv.sh home         show which app the Home button opens
 #
 # Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
 # REMOTE (default github).
@@ -18,6 +21,7 @@ PKG=se.kampe.tvlauncher
 ACTIVITY=.MainActivity
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 APK_DIR="$ROOT/build/ci"
+STOCK_HOME=com.google.android.tvlauncher/.MainActivity
 WORKFLOW=build.yml
 ARTIFACT=app-debug
 
@@ -87,6 +91,24 @@ log() {
     adb -s "$SERIAL" logcat --pid="$pid"
 }
 
+current_home() {
+    adb -s "$SERIAL" shell cmd package resolve-activity --brief \
+        -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -1
+}
+
+home() {
+    connect
+    local target
+    case "${1:-}" in
+        on) target="$PKG/$ACTIVITY" ;;
+        off) target="$STOCK_HOME" ;;
+        "") echo "Home opens: $(current_home)"; return ;;
+        *) die "Usage: ./tv.sh home [on|off]" ;;
+    esac
+    adb -s "$SERIAL" shell cmd package set-home-activity --user 0 "$target"
+    echo "Home opens: $(current_home)"
+}
+
 case "${1:-}" in
     build) build ;;
     install) install ;;
@@ -94,5 +116,6 @@ case "${1:-}" in
     deploy) build && install && start ;;
     shot) shot "${2:-}" ;;
     log) log ;;
-    *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+    home) home "${2:-}" ;;
+    *) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
 esac
