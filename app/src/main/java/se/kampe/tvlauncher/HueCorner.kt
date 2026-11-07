@@ -37,6 +37,7 @@ class HueCorner(
     val segment: View = bar.findViewById(R.id.hue_current)
     private val barDot: PaletteDot = bar.findViewById(R.id.hue_dot)
     private val barLabel: TextView = bar.findViewById(R.id.hue_label)
+    private val barRoom: TextView = bar.findViewById(R.id.hue_room)
     private val groupLabel: TextView = panel.findViewById(R.id.hue_group)
     private val scroll: ScrollView = panel.findViewById(R.id.hue_scroll)
     private val list: ViewGroup = panel.findViewById(R.id.hue_list)
@@ -55,10 +56,10 @@ class HueCorner(
     private var shownFavourites: List<Favourite>? = null
 
     /**
-     * A favourite button: a scene, or a room's "Lights off" ([key] `off:<room id>`).
-     * [colors] empty draws the dark "off" dot.
+     * A favourite button: a scene, or a room's "Lights off" ([key] `off:<room id>`), with the
+     * [room] it belongs to. [colors] empty draws the dark "off" dot.
      */
-    private data class Favourite(val key: String, val label: String, val colors: List<Int>)
+    private data class Favourite(val key: String, val label: String, val room: String, val colors: List<Int>)
 
     val isOpen get() = panel.visibility == View.VISIBLE
     val isVisible get() = bar.visibility == View.VISIBLE
@@ -145,6 +146,8 @@ class HueCorner(
             group?.on == false -> activity.getString(R.string.hue_off)
             else -> group?.name.orEmpty()
         }
+        // Scene names repeat across rooms, so say which room (unless the label is the room).
+        setRoom(barRoom, if (scene != null || group?.on == false) group?.name else null)
         barDot.colors = scene?.let(::colorsOf) ?: if (group?.on == true) listOf(WARM_WHITE) else emptyList()
         updateFavourites()
     }
@@ -155,9 +158,9 @@ class HueCorner(
             val offGroup = key.removePrefix(OFF_PREFIX).takeIf { key.startsWith(OFF_PREFIX) }
             if (offGroup != null) {
                 groups.firstOrNull { it.id == offGroup }
-                    ?.let { Favourite(key, activity.getString(R.string.hue_group_off, it.name), emptyList()) }
+                    ?.let { Favourite(key, activity.getString(R.string.hue_off), it.name, emptyList()) }
             } else {
-                find(key)?.let { (_, scene) -> Favourite(key, scene.name, colorsOf(scene)) }
+                find(key)?.let { (group, scene) -> Favourite(key, scene.name, group.name, colorsOf(scene)) }
             }
         }
         if (favourites == shownFavourites) return
@@ -172,6 +175,7 @@ class HueCorner(
             button.tag = fav.key
             button.findViewById<PaletteDot>(R.id.dot).colors = fav.colors
             button.findViewById<TextView>(R.id.label).text = fav.label
+            setRoom(button.findViewById(R.id.room), fav.room)
             button.setOnClickListener { chooseFavourite(fav.key) }
             bar.addView(button)
         }
@@ -180,6 +184,11 @@ class HueCorner(
         if (focusedId != null) {
             ((0 until bar.childCount).map(bar::getChildAt).firstOrNull { it.tag == focusedId } ?: segment).requestFocus()
         }
+    }
+
+    private fun setRoom(view: TextView, room: String?) {
+        view.text = room
+        view.visibility = if (room.isNullOrEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun chooseFavourite(key: String) {

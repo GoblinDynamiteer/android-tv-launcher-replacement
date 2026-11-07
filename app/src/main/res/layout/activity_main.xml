@@ -99,6 +99,20 @@
                 android:maxLines="1"
                 android:textColor="@color/input_label"
                 android:textSize="12sp" />
+            <TextView
+                android:id="@+id/hue_room"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="2dp"
+                android:alpha="0.6"
+                android:duplicateParentState="true"
+                android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/input_label"
+                android:textSize="9sp"
+                android:visibility="gone" />
 
             <TextView
                 android:layout_width="wrap_content"

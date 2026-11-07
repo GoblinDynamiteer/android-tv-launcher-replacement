@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A favourite scene in the Hue bar: OK sets it. -->
+<!-- A favourite scene in the Hue bar, with its room in small dim text: OK sets it. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="30dp"
@@ -28,4 +28,19 @@
         android:maxLines="1"
         android:textColor="@color/input_label"
         android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/room"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="2dp"
+        android:alpha="0.6"
+        android:duplicateParentState="true"
+        android:fontFamily="sans-serif-light"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/input_label"
+        android:textSize="9sp"
+        android:visibility="gone" />
 </LinearLayout>
