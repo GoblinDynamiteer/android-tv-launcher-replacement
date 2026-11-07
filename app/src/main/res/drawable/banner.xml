@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 16:9 banner shown in the stock launcher's app row. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="@color/background"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="@color/accent"
+        android:pathData="M160,50 L208,94 L192,94 L192,132 L128,132 L128,94 L112,94 Z" />
+</vector>
