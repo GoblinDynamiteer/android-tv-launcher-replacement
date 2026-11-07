@@ -12,6 +12,8 @@
     <string name="hint_remove">remove from Home</string>
     <string name="inputs">Inputs</string>
     <string name="input_failed">Couldn\'t open %1$s</string>
+    <string name="input_waking">waking…</string>
+    <string name="input_wake_failed">%1$s didn\'t wake</string>
     <string name="hue">Hue scenes</string>
     <string name="hue_off">Lights off</string>
     <string name="hue_failed">Hue bridge didn\'t respond</string>

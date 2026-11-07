@@ -37,7 +37,18 @@ class MainActivity : Activity() {
     private lateinit var inputBar: GlassView
     private lateinit var inputCollapsing: CollapsingBar
     private lateinit var hue: HueCorner
-    private var shownInputs: List<HdmiInput>? = null
+    /** The inputs and the waking one the bar was built from, to rebuild only on changes. */
+    private var shownInputs: Pair<List<HdmiInput>, String?>? = null
+
+    /** The input being woken over the network (design/wake-mockups.html W2), or null. */
+    private var wakingId: String? = null
+    private var wakingLabel = ""
+    private var wakePulse: ObjectAnimator? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val wakeTimeout = Runnable {
+        Toast.makeText(this, getString(R.string.input_wake_failed, wakingLabel), Toast.LENGTH_LONG).show()
+        stopWaking()
+    }
 
     /** Consoles turning on or off, or devices appearing over HDMI-CEC, update the input bar. */
     private val inputCallback = object : TvInputManager.TvInputCallback() {
@@ -99,12 +110,17 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         endMove()
+        stopWaking()
         hue.stop()
         super.onPause()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (hue.onKey(event)) return true
+        if (wakingId != null && event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP) stopWaking()
+            return true
+        }
         if (moving == null) return super.dispatchKeyEvent(event)
         val down = event.action == KeyEvent.ACTION_DOWN
         when (event.keyCode) {
@@ -229,8 +245,15 @@ class MainActivity : Activity() {
     /** Rebuilds the input bar (top right) if the HDMI inputs or their on/standby state changed. */
     private fun refreshInputs() {
         val inputs = Inputs.hdmi(this)
-        if (inputs == shownInputs) return
-        shownInputs = inputs
+        // The device being woken has come up: switch to it.
+        wakingId?.let { id -> inputs.firstOrNull { it.id == id && it.on } }?.let { awake ->
+            stopWaking()
+            openInput(awake)
+        }
+        val state = inputs to wakingId
+        if (state == shownInputs) return
+        shownInputs = state
+        wakePulse?.cancel()
 
         val focusedId = inputBar.focusedChild?.tag
         inputBar.removeViews(1, inputBar.childCount - 1) // keep the gamepad icon
@@ -281,10 +304,12 @@ class MainActivity : Activity() {
         segment.tag = input.id
         segment.findViewById<TextView>(R.id.label).text = input.label
         val dot = segment.findViewById<View>(R.id.dot)
+        val waking = input.id == wakingId
         val paintDot = { focused: Boolean ->
             dot.background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(when {
+                    waking -> Color.rgb(0xFB, 0xBF, 0x24)
                     input.on -> Color.rgb(0x4A, 0xDE, 0x80)
                     focused -> Color.argb(77, 0, 0, 0)
                     else -> Color.argb(90, 255, 255, 255)
@@ -292,15 +317,57 @@ class MainActivity : Activity() {
             }
         }
         paintDot(false)
-        segment.setOnFocusChangeListener { _, hasFocus -> paintDot(hasFocus) }
-        segment.setOnClickListener {
-            try {
-                startActivity(input.intent())
-            } catch (e: ActivityNotFoundException) {
-                Toast.makeText(this, getString(R.string.input_failed, input.label), Toast.LENGTH_SHORT).show()
+        if (waking) {
+            segment.findViewById<View>(R.id.sub).visibility = View.VISIBLE
+            wakePulse = ObjectAnimator.ofFloat(dot, View.ALPHA, 1f, 0.35f).apply {
+                duration = 500
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                start()
             }
         }
+        segment.setOnFocusChangeListener { _, hasFocus -> paintDot(hasFocus) }
+        segment.setOnClickListener {
+            val mac = if (input.on) null else Wake.macFor(this, input.label)
+            if (mac != null) startWaking(input, mac) else openInput(input)
+        }
         return segment
+    }
+
+    private fun openInput(input: HdmiInput) {
+        try {
+            startActivity(input.intent())
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.input_failed, input.label), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Wakes a sleeping input's device over the network and waits on Home until its HDMI port
+     * reports a signal ([refreshInputs] then switches), for at most 45 s. Back cancels.
+     */
+    private fun startWaking(input: HdmiInput, mac: String) {
+        if (wakingId == input.id) return
+        stopWaking()
+        wakingId = input.id
+        wakingLabel = input.label
+        // A few packets, in case one gets lost while the network card dozes.
+        for (delay in longArrayOf(0, 1500, 4000)) {
+            handler.postDelayed({
+                if (wakingId == input.id) Thread { runCatching { Wake.send(this, mac) } }.start()
+            }, delay)
+        }
+        handler.postDelayed(wakeTimeout, 45_000)
+        refreshInputs()
+    }
+
+    private fun stopWaking() {
+        if (wakingId == null) return
+        wakingId = null
+        handler.removeCallbacksAndMessages(null)
+        wakePulse?.cancel()
+        wakePulse = null
+        refreshInputs()
     }
 
     @Suppress("DEPRECATION")

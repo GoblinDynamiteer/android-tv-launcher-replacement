@@ -13,6 +13,9 @@
 #   ./tv.sh home         show which app the Home button opens
 #   ./tv.sh hue-key [file]
 #                        copy the Hue bridge key (default ~/.hue_key) into the launcher
+#   ./tv.sh wake-mac "<input name>" <mac>
+#                        wake that input's device over the network (Wake-on-LAN) when it's
+#                        picked while asleep; no arguments lists the configured ones
 #
 # Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
 # REMOTE (default github), VIEWER (screenshot viewer, default eog).
@@ -148,6 +151,27 @@ hue_key() {
     echo "Hue key copied to $PKG ($size bytes). Remove: adb shell run-as $PKG rm files/hue_key"
 }
 
+# Wake-on-LAN MAC addresses per input name (as shown in the input bar), kept in the
+# launcher's files/wake_macs as "<name>\t<mac>" lines.
+wake_mac() {
+    connect
+    adb -s "$SERIAL" shell pm path "$PKG" >/dev/null 2>&1 ||
+        die "$PKG is not installed; run ./tv.sh install first."
+    local current
+    current="$(adb -s "$SERIAL" shell "run-as $PKG cat files/wake_macs 2>/dev/null" | tr -d '\r' || true)"
+    if (($# == 0)); then
+        printf '%s\n' "${current:-(none)}"
+        return
+    fi
+    local name="$1" mac="${2:-}"
+    [[ "$mac" =~ ^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$ ]] ||
+        die 'Usage: ./tv.sh wake-mac "<input name>" aa:bb:cc:dd:ee:ff'
+    { printf '%s\n' "$current" | awk -F'\t' -v n="$name" 'NF && tolower($1) != tolower(n)'
+      printf '%s\t%s\n' "$name" "$mac"; } |
+        adb -s "$SERIAL" shell "run-as $PKG sh -c 'mkdir -p files && cat > files/wake_macs'"
+    adb -s "$SERIAL" shell "run-as $PKG cat files/wake_macs" | tr -d '\r'
+}
+
 case "${1:-}" in
     build) build ;;
     install) install ;;
@@ -157,5 +181,6 @@ case "${1:-}" in
     log) log ;;
     home) home "${2:-}" ;;
     hue-key) hue_key "${2:-}" ;;
+    wake-mac) shift; wake_mac "$@" ;;
     *) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
 esac

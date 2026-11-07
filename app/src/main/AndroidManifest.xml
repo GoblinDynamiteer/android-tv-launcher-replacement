@@ -4,8 +4,10 @@
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- The Hue bridge on the local network. -->
+    <!-- The Hue bridge on the local network, and Wake-on-LAN packets to it. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The network's broadcast address, for Wake-on-LAN. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Android 11 package visibility: every TV app, Settings, and the TV input services
          (to read the names of HDMI inputs). -->
