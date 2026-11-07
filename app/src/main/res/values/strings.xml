@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Home</string>
-    <string name="not_installed">%1$s (not installed)</string>
     <string name="more_apps">More apps</string>
-    <string name="more_apps_soon">More apps: coming soon</string>
+    <string name="apps_title">Apps</string>
+    <string name="section_home">On Home</string>
+    <string name="section_all">All apps</string>
+    <string name="home_empty">Hold OK on an app to add it to the home screen.</string>
+    <!-- Hint for the focused app: name, then hint_add or hint_remove. -->
+    <string name="hint">%1$s  ·  OK open  ·  Hold OK %2$s</string>
+    <string name="hint_add">add to Home</string>
+    <string name="hint_remove">remove from Home</string>
 </resources>

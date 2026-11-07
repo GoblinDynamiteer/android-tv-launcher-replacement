@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- More apps (mockup M3 + S2 in design/apps-mockups.html). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <ImageView
+        android:id="@+id/wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="64dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:orientation="vertical"
+            android:paddingHorizontal="60dp"
+            android:paddingTop="36dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-light"
+                    android:includeFontPadding="false"
+                    android:text="@string/apps_title"
+                    android:textColor="@color/text"
+                    android:textSize="26sp" />
+
+                <TextClock
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end|bottom"
+                    android:alpha="0.8"
+                    android:fontFamily="sans-serif-light"
+                    android:format12Hour="HH:mm"
+                    android:format24Hour="HH:mm"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/text"
+                    android:textSize="20sp" />
+            </FrameLayout>
+
+            <TextView
+                style="@style/SectionLabel"
+                android:layout_marginTop="28dp"
+                android:text="@string/section_home" />
+
+            <TextView
+                android:id="@+id/home_empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:alpha="0.6"
+                android:text="@string/home_empty"
+                android:textColor="@color/text"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <GridLayout
+                android:id="@+id/home_grid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:columnCount="6" />
+
+            <TextView
+                style="@style/SectionLabel"
+                android:layout_marginTop="18dp"
+                android:text="@string/section_all" />
+
+            <GridLayout
+                android:id="@+id/all_grid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:columnCount="6" />
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="28dp"
+        android:background="@drawable/hint_background"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="7dp"
+        android:textColor="@color/text"
+        android:textSize="11sp" />
+</FrameLayout>

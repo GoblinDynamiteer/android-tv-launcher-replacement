@@ -2,33 +2,35 @@ package se.kampe.tvlauncher
 
 import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.Toast
 
 /**
  * Home screen, layout D ("center stage") from design/mockups.html: muted wallpaper, a large
- * clock and the apps in one glass pill.
+ * clock and the home apps (see [HomeApps]) in one glass pill, ending in a More apps button.
  */
 class MainActivity : Activity() {
 
-    private data class App(val pkg: String, val name: String)
+    private lateinit var dock: GlassView
+    private var dockKeys: List<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val wallpaper = Wallpaper.load(resources, R.drawable.wallpaper)
+        val wallpaper = Wallpaper.load(resources, R.drawable.wallpaper, Wallpaper.HOME)
         findViewById<ImageView>(R.id.wallpaper).setImageBitmap(wallpaper.background)
-
-        val dock = findViewById<GlassView>(R.id.dock)
+        dock = findViewById(R.id.dock)
         dock.glass = wallpaper.glass
-        APPS.forEach { app -> makeTile(dock, app)?.let { dock.addView(it) } }
-        dock.addView(makeMoreButton(dock))
-        dock.getChildAt(0)?.requestFocus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Home apps may have changed in More apps, or an app was uninstalled.
+        val apps = Apps.forKeys(this, HomeApps.load(this))
+        if (apps.map { it.key } != dockKeys) buildDock(apps)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -45,55 +47,34 @@ class MainActivity : Activity() {
         if (!isHome()) super.onBackPressed()
     }
 
-    /** A tile with the app's TV banner, or null if the app isn't installed. */
-    private fun makeTile(parent: ViewGroup, app: App): View? {
-        val info = try {
-            packageManager.getApplicationInfo(app.pkg, 0)
-        } catch (e: PackageManager.NameNotFoundException) {
-            return null
-        }
+    private fun buildDock(apps: List<AppEntry>) {
+        val focusedKey = dock.focusedChild?.tag
+        dock.removeAllViews()
+        apps.forEach { dock.addView(makeTile(dock, it)) }
+        dock.addView(makeMoreButton(dock))
+        dockKeys = apps.map { it.key }
+
+        val focus = (0 until dock.childCount).map(dock::getChildAt).firstOrNull { it.tag == focusedKey }
+        (focus ?: dock.getChildAt(0)).requestFocus()
+    }
+
+    private fun makeTile(parent: ViewGroup, app: AppEntry): View {
         val tile = layoutInflater.inflate(R.layout.tile, parent, false) as ImageView
-        tile.setImageDrawable(
-            packageManager.getApplicationBanner(info) ?: packageManager.getApplicationIcon(info)
-        )
-        tile.contentDescription = packageManager.getApplicationLabel(info)
-        tile.clipToOutline = true
-        tile.setOnClickListener { launch(app) }
-        tile.onFocusChangeListener = focusEffect
+        Tiles.bindImage(tile, app)
+        tile.tag = app.key
+        tile.setOnClickListener { startActivity(app.intent) }
+        tile.setOnFocusChangeListener { v, hasFocus -> Tiles.focusEffect(v, hasFocus) }
         return tile
     }
 
+    @Suppress("DEPRECATION")
     private fun makeMoreButton(parent: ViewGroup): View {
         val more = layoutInflater.inflate(R.layout.more_button, parent, false)
         more.setOnClickListener {
-            Toast.makeText(this, R.string.more_apps_soon, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, AppsActivity::class.java))
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         }
-        more.onFocusChangeListener = focusEffect
+        more.setOnFocusChangeListener { v, hasFocus -> Tiles.focusEffect(v, hasFocus) }
         return more
-    }
-
-    private val focusEffect = View.OnFocusChangeListener { v, hasFocus ->
-        val scale = if (hasFocus) 1.07f else 1f
-        val lift = if (hasFocus) 12 * resources.displayMetrics.density else 0f
-        v.animate().scaleX(scale).scaleY(scale).translationZ(lift).setDuration(150).start()
-    }
-
-    private fun launch(app: App) {
-        val intent = packageManager.getLeanbackLaunchIntentForPackage(app.pkg)
-            ?: packageManager.getLaunchIntentForPackage(app.pkg)
-        if (intent == null) {
-            Toast.makeText(this, getString(R.string.not_installed, app.name), Toast.LENGTH_SHORT)
-                .show()
-            return
-        }
-        startActivity(intent)
-    }
-
-    private companion object {
-        val APPS = listOf(
-            App("com.plexapp.android", "Plex"),
-            App("com.google.android.youtube.tv", "YouTube"),
-            App("se.svt.android.svtplay", "SVT Play"),
-        )
     }
 }

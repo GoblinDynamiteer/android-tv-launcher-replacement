@@ -19,21 +19,31 @@ import kotlin.math.sqrt
  * (RenderEffect is API 31) and the TV's CPU is weak, so this is done on a quarter-size
  * bitmap; it's blurred anyway, so scaling it up to the screen costs no detail.
  *
- * Values follow mockup D in design/mockups.html (CSS px on the 1920 px canvas / 4).
+ * Values follow the mockups in design/ (CSS px on the 1920 px canvas / 4). Results are cached
+ * for the life of the process.
  */
 object Wallpaper {
 
-    class Result(val background: Bitmap, val glass: Bitmap)
+    class Result(val background: Bitmap, val glass: Bitmap?)
+
+    /** [blur] and [glassBlur] are box-blur radii on the quarter-size bitmap. */
+    data class Style(val brightness: Float, val saturation: Float, val blur: Int, val glassBlur: Int?)
+
+    /** Home screen: brightness(.55) saturate(.7) blur(14px); glass blur(28px). */
+    val HOME = Style(brightness = 0.55f, saturation = 0.7f, blur = 3, glassBlur = 6)
+
+    /** More apps: brightness(.38) saturate(.6) blur(24px), no glass. */
+    val DRAWER = Style(brightness = 0.38f, saturation = 0.6f, blur = 6, glassBlur = null)
 
     private const val SAMPLE = 4             // decode at 1/4 size: 480x270
-    private const val BRIGHTNESS = 0.55f     // CSS brightness(.55)
-    private const val SATURATION = 0.7f      // CSS saturate(.7)
-    private const val BG_BLUR = 3            // ~ CSS blur(14px)
-    private const val GLASS_BLUR = 6         // ~ CSS backdrop-filter blur(28px)
     private const val GLASS_SATURATION = 1.3f
     private val VIGNETTE = Color.argb(115, 0, 0, 0) // rgba(0,0,0,.45) at the corners
+    private val cache = HashMap<Pair<Int, Style>, Result>()
 
-    fun load(res: Resources, resId: Int): Result {
+    fun load(res: Resources, resId: Int, style: Style): Result =
+        cache.getOrPut(resId to style) { render(res, resId, style) }
+
+    private fun render(res: Resources, resId: Int, style: Style): Result {
         val options = BitmapFactory.Options().apply {
             inSampleSize = SAMPLE
             inScaled = false
@@ -41,15 +51,19 @@ object Wallpaper {
         }
         val source = BitmapFactory.decodeResource(res, resId, options)
 
-        val mute = ColorMatrix().apply { setSaturation(SATURATION) }
-        mute.postConcat(ColorMatrix().apply { setScale(BRIGHTNESS, BRIGHTNESS, BRIGHTNESS, 1f) })
+        val mute = ColorMatrix().apply { setSaturation(style.saturation) }
+        mute.postConcat(ColorMatrix().apply {
+            setScale(style.brightness, style.brightness, style.brightness, 1f)
+        })
         val background = filtered(source, mute)
         source.recycle()
-        blur(background, BG_BLUR)
+        blur(background, style.blur)
         vignette(background)
 
-        val glass = filtered(background, ColorMatrix().apply { setSaturation(GLASS_SATURATION) })
-        blur(glass, GLASS_BLUR)
+        val glass = style.glassBlur?.let { radius ->
+            filtered(background, ColorMatrix().apply { setSaturation(GLASS_SATURATION) })
+                .also { blur(it, radius) }
+        }
         return Result(background, glass)
     }
 
