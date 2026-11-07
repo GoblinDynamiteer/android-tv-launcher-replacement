@@ -47,6 +47,9 @@ class HueCorner(
     init {
         panel.cornerRadius = 18 * density
         panel.elevation = 40 * density
+        // GlassView lets children overflow (for the dock's focus zoom), but here that would let
+        // rows scrolled out of the list draw over the header and the bar.
+        panel.clipChildren = true
         dim.elevation = 30 * density
         dim.outlineProvider = null
         segment.setOnClickListener { open() }
