@@ -147,6 +147,7 @@ class MainActivity : Activity() {
         apps.forEach { dock.addView(makeTile(dock, it)) }
         dock.addView(makeMoreButton(dock))
         dockKeys = apps.map { it.key }
+        linkCorners()
 
         val focus = (0 until dock.childCount).map(dock::getChildAt).firstOrNull { it.tag == focusedKey }
         (focus ?: dock.getChildAt(0)).requestFocus()
@@ -246,9 +247,10 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Links the two top corners: ◀ ▶ move from the Hue bar's last button to the (folded) input
-     * bar's icon and from the first input to the Hue bulb, which unfold their bars. At the
-     * outer ends focus stays put instead of dropping down to the dock.
+     * Links the two top corners and the dock to them: ◀ ▶ move from the Hue bar's last button to
+     * the (folded) input bar's icon and from the first input to the Hue bulb, which unfold their
+     * bars. At the outer ends focus stays put instead of dropping down to the dock. Called when
+     * the dock or either bar changes.
      */
     private fun linkCorners() {
         val inputsIcon = findViewById<View>(R.id.inputs_icon).takeIf { inputBar.visibility == View.VISIBLE }
@@ -258,6 +260,19 @@ class MainActivity : Activity() {
         hue.segment.nextFocusRightId = View.NO_ID // to the first favourite, if any
         hueLast.nextFocusRightId = inputsIcon?.id ?: hueLast.id
         firstInput?.nextFocusLeftId = if (hue.isVisible) R.id.hue_icon else firstInput?.id ?: View.NO_ID
+
+        // The dock: ◀ from the first tile to the bulb, ▶ from More apps to the gamepad, and ▲
+        // from the left half of the dock to the bulb, from the right half to the gamepad (the
+        // other corner if one is hidden).
+        val hueIcon = R.id.hue_icon.takeIf { hue.isVisible }
+        val gamepad = inputsIcon?.id
+        val tiles = (0 until dock.childCount).map(dock::getChildAt)
+        tiles.forEachIndexed { i, tile ->
+            val leftHalf = i < (tiles.size + 1) / 2
+            tile.nextFocusUpId = (if (leftHalf) hueIcon ?: gamepad else gamepad ?: hueIcon) ?: View.NO_ID
+        }
+        tiles.firstOrNull()?.nextFocusLeftId = hueIcon ?: View.NO_ID
+        tiles.lastOrNull()?.let { it.nextFocusRightId = gamepad ?: it.id }
     }
 
     private fun makeInputSegment(input: HdmiInput): View {
@@ -291,9 +306,7 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     private fun makeMoreButton(parent: ViewGroup): View {
         val more = layoutInflater.inflate(R.layout.more_button, parent, false)
-        // ▶ on the last button would otherwise jump up to the input bar.
-        more.id = View.generateViewId()
-        more.nextFocusRightId = more.id
+        more.id = View.generateViewId() // ▶ from it is linked in linkCorners()
         more.setOnClickListener {
             startActivity(Intent(this, AppsActivity::class.java))
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
