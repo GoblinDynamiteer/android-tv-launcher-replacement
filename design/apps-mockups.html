@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>More Apps Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #0b0c10; --text: #e8e8ec; --muted: #9a9cab; --line: #23252e;
+    --glass-a: 0.10; --glass-blur: 28px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 Roboto, system-ui, sans-serif; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-weight: 400; font-size: 28px; margin: 0 0 4px; }
+  h2 { font-weight: 500; font-size: 20px; margin: 48px 0 4px; }
+  h3 { font-weight: 400; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+       margin: 64px 0 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  p.lead, .desc { color: var(--muted); margin: 0 0 16px; max-width: 82ch; }
+  .desc b, .lead b { color: var(--text); font-weight: 500; }
+  kbd { font: 12px Roboto, sans-serif; padding: 1px 6px; border: 1px solid #3a3d4a; border-radius: 4px; color: var(--text); }
+
+  .frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px;
+           box-shadow: 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,.5); }
+  .tv { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+        transform: scale(var(--k, .5)); overflow: hidden; color: #fff; font-family: Roboto, sans-serif; }
+  /* Home background as in layout D. */
+  .bg { position: absolute; inset: -40px; background: url(assets/bg.jpg) center / cover;
+        filter: brightness(.55) saturate(.7) blur(14px); }
+  .bg.deep { filter: brightness(.38) saturate(.6) blur(24px); }
+  .shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.45)); }
+  .glass { background: rgba(255,255,255,var(--glass-a)); backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+           border: 1px solid rgba(255,255,255,.16);
+           box-shadow: 0 10px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12); }
+
+  /* App banners: real ones where we have them, placeholders for the rest. */
+  .ban { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+         font-weight: 500; letter-spacing: .3px; color: #fff; }
+  .ban img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  [data-f] { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, opacity .15s; }
+  .focused { z-index: 2; }
+
+  .time { font-weight: 100; letter-spacing: -6px; line-height: 1; }
+  .date { font-weight: 300; opacity: .8; }
+  .hint { position: absolute; font-size: 22px; color: rgba(255,255,255,.7); display: flex; gap: 28px; }
+  .hint span b { display: inline-block; min-width: 40px; padding: 2px 10px; margin-right: 8px; border-radius: 8px;
+                 border: 1px solid rgba(255,255,255,.35); text-align: center; font-weight: 400; font-size: 19px; }
+
+  /* Dock (pill) from layout D. */
+  .pill { display: flex; align-items: center; gap: 22px; padding: 22px 26px; border-radius: 999px; }
+  .pill .ban { width: 240px; height: 135px; border-radius: 68px; font-size: 26px; }
+  .pill .round { width: 135px; height: 135px; border-radius: 50%; background: rgba(255,255,255,.1);
+                 display: flex; align-items: center; justify-content: center; }
+  .pill .focused { transform: scale(1.07); box-shadow: 0 0 0 4px rgba(255,255,255,.92), 0 14px 40px rgba(0,0,0,.5); }
+  .dots { width: 44px; height: 44px; }
+
+  /* Grid tiles (banner + name). */
+  .grid { display: grid; gap: 40px 36px; }
+  .gt .ban { border-radius: 18px; font-size: 28px; }
+  .gt .name { font-size: 24px; font-weight: 300; margin: 12px 4px 0; opacity: .85; }
+  .gt.focused .ban { transform: scale(1.06); box-shadow: 0 0 0 4px rgba(255,255,255,.92), 0 14px 40px rgba(0,0,0,.5); }
+  .gt.focused .name { opacity: 1; font-weight: 400; }
+  .gt .ban { transition: transform .15s ease, box-shadow .15s ease; }
+
+  /* Small check / pin badge. */
+  .badge { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%;
+           background: rgba(255,255,255,.95); color: #111; display: flex; align-items: center; justify-content: center;
+           box-shadow: 0 2px 10px rgba(0,0,0,.4); z-index: 3; }
+  .badge svg { width: 26px; height: 26px; }
+
+  /* ---------- M1: glass sheet ---------- */
+  .m1 .home { position: absolute; inset: 0; filter: brightness(.6); }
+  .m1 .sheet { position: absolute; left: 96px; right: 96px; top: 200px; bottom: -2px; border-radius: 48px 48px 0 0;
+               padding: 56px 72px; }
+  .m1 .sheet h4 { margin: 0 0 40px; font-size: 40px; font-weight: 300; }
+  .m1 .grid { grid-template-columns: repeat(6, 250px); gap: 40px 34px; }
+  .m1 .gt .ban { width: 250px; height: 141px; }
+
+  /* ---------- M2: pill grows into a scrolling row ---------- */
+  .m2 .center { position: absolute; left: 0; right: 0; top: 140px; text-align: center; opacity: .55; }
+  .m2 .time { font-size: 150px; letter-spacing: -4px; }
+  .m2 .date { font-size: 32px; margin-top: 8px; }
+  .m2 .track { position: absolute; left: -2px; right: -2px; top: 560px; height: 300px; overflow: hidden;
+               -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+               mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); }
+  .m2 .pill { position: absolute; left: 160px; top: 60px; border-radius: 999px; }
+  .m2 .sep { width: 2px; height: 100px; background: rgba(255,255,255,.25); margin: 0 6px; }
+  .m2 .rest .ban { opacity: .9; }
+  .m2 .label { position: absolute; top: 470px; font-size: 22px; letter-spacing: 3px; text-transform: uppercase; opacity: .6; }
+
+  /* ---------- M3: full-screen drawer with sections ---------- */
+  .m3 .top { position: absolute; left: 120px; right: 120px; top: 80px; display: flex; justify-content: space-between;
+             align-items: baseline; }
+  .m3 .top h4 { margin: 0; font-size: 52px; font-weight: 200; }
+  .m3 .top .clock { font-size: 40px; font-weight: 200; opacity: .8; }
+  .m3 .sec { position: absolute; left: 120px; font-size: 22px; letter-spacing: 3px; text-transform: uppercase; opacity: .6; }
+  .m3 .grid { position: absolute; left: 120px; grid-template-columns: repeat(6, 250px); gap: 34px 32px; }
+  .m3 .gt .ban { width: 250px; height: 141px; }
+
+  /* ---------- S1: checkbox list + live preview ---------- */
+  .s1 .panel { position: absolute; left: 120px; top: 90px; bottom: 90px; width: 960px; border-radius: 40px;
+               padding: 48px 56px; display: flex; flex-direction: column; }
+  .s1 h4 { margin: 0; font-size: 40px; font-weight: 300; }
+  .s1 .sub { font-size: 22px; opacity: .65; margin: 8px 0 28px; }
+  .s1 .list { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .s1 .row { display: flex; align-items: center; gap: 28px; padding: 10px 16px; border-radius: 18px; font-size: 28px; font-weight: 300; }
+  .s1 .row .ban { width: 128px; height: 72px; border-radius: 12px; font-size: 16px; flex: none; }
+  .s1 .row .name { flex: 1; }
+  .s1 .row.focused { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 2px rgba(255,255,255,.85); }
+  .s1 .row .move { font-size: 20px; opacity: 0; letter-spacing: 1px; }
+  .s1 .row.focused.on .move { opacity: .75; }
+  .box { width: 40px; height: 40px; border-radius: 10px; border: 2px solid rgba(255,255,255,.6); flex: none;
+         display: flex; align-items: center; justify-content: center; }
+  .on .box { background: #fff; border-color: #fff; color: #111; }
+  .box svg { width: 28px; height: 28px; display: none; }
+  .on .box svg { display: block; }
+  .s1 .preview { position: absolute; left: 1140px; right: 80px; top: 90px; }
+  .s1 .preview .cap { font-size: 22px; letter-spacing: 3px; text-transform: uppercase; opacity: .6; margin-bottom: 24px; }
+  .s1 .mini { position: relative; width: 660px; height: 372px; border-radius: 22px; overflow: hidden;
+              box-shadow: 0 0 0 1px rgba(255,255,255,.2), 0 20px 50px rgba(0,0,0,.5); }
+  .s1 .mini .bg { inset: -20px; filter: brightness(.55) saturate(.7) blur(6px); }
+  .s1 .mini .t { position: absolute; left: 0; right: 0; top: 54px; text-align: center; font-size: 84px; font-weight: 100; letter-spacing: -3px; }
+  .s1 .mini .pill { position: absolute; left: 50%; top: 220px; transform: translateX(-50%); gap: 9px; padding: 9px 11px; }
+  .s1 .mini .pill .ban { width: 84px; height: 47px; border-radius: 24px; font-size: 11px; }
+  .s1 .mini .pill .round { width: 47px; height: 47px; }
+  .s1 .mini .dots { width: 16px; height: 16px; }
+  .s1 .preview .note { font-size: 22px; opacity: .65; margin-top: 24px; line-height: 1.5; }
+
+  /* ---------- S2: badges in the grid ---------- */
+  .s2 .tip { position: absolute; padding: 14px 22px; border-radius: 16px; font-size: 22px; white-space: nowrap;
+             background: rgba(20,20,26,.85); border: 1px solid rgba(255,255,255,.2); }
+
+  /* ---------- S3: edit mode on the dock ---------- */
+  .s3 .center { position: absolute; left: 0; right: 0; top: 200px; text-align: center; opacity: .35; }
+  .s3 .time { font-size: 210px; }
+  .s3 .date { font-size: 38px; margin-top: 12px; }
+  .s3 .banner-top { position: absolute; left: 50%; top: 520px; transform: translateX(-50%); font-size: 26px;
+                    padding: 12px 28px; border-radius: 999px; background: rgba(255,255,255,.14); }
+  .s3 .pill { position: absolute; left: 50%; top: 640px; transform: translateX(-50%); gap: 72px; padding: 22px 40px; }
+  .s3 .slot .focused + .x { z-index: 3; }
+  .s3 .pill .ban { animation: wob 1.6s ease-in-out infinite; }
+  .s3 .pill .ban:nth-child(2) { animation-delay: -.4s; } .s3 .pill .ban:nth-child(3) { animation-delay: -.8s; }
+  .s3 .pill .ban.focused { animation: none; transform: scale(1.07) translateY(-6px); }
+  @keyframes wob { 0%,100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+  .s3 .x { position: absolute; top: -8px; right: -8px; width: 44px; height: 44px; border-radius: 50%; background: #fff;
+           color: #111; display: flex; align-items: center; justify-content: center; font-size: 28px; line-height: 1;
+           box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+  .s3 .slot { position: relative; overflow: visible; }
+  .s3 .arrow { position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; opacity: .9; }
+  .s3 .plus { font-size: 64px; font-weight: 200; line-height: 1; }
+
+  .notes { margin-top: 56px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
+  .notes li { margin: 6px 0; max-width: 90ch; }
+  .notes b { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>More apps &amp; choosing home apps</h1>
+  <p class="lead">Both build on layout D. The app list is what's actually installed on the TV (10 apps plus
+    Settings). <b>Plex, YouTube and SVT Play use their real banners</b>; the others are placeholders, since the
+    launcher will show each app's own banner. Click to focus, arrow keys to move; in S1 and S2 clicking also
+    toggles an app on or off the home screen.</p>
+
+  <h3>What "More apps" opens</h3>
+
+  <h2>M1 · Glass sheet</h2>
+  <p class="desc">A frosted sheet slides up over the dimmed home screen with every app in a grid. <kbd>Back</kbd>
+    slides it away. Simple, and the home screen stays visible as context.</p>
+  <div class="frame"><div class="tv m1" id="m1"></div></div>
+
+  <h2>M2 · The dock grows</h2>
+  <p class="desc">No new screen: the pill stretches into one long row. Your home apps first, a thin divider, then
+    everything else; <kbd>◀ ▶</kbd> scrolls. The most minimal, but slow to scan with many apps.</p>
+  <div class="frame"><div class="tv m2" id="m2"></div></div>
+
+  <h2>M3 · App drawer</h2>
+  <p class="desc">A full screen of its own over a deeper-blurred wallpaper: "On Home" on top, all other apps
+    below. Clearest overview, and it shows what's pinned without any extra UI.</p>
+  <div class="frame"><div class="tv m3" id="m3"></div></div>
+
+  <h3>Choosing which apps are on the home screen</h3>
+
+  <h2>S1 · Checkbox list with live preview</h2>
+  <p class="desc">A "Home screen apps" page (reached from the end of the More apps view, or a long press on the
+    dock). Check an app to add it; on a checked app <kbd>◀ ▶</kbd> moves it in the order. The mini home screen on
+    the right updates as you go. <b>Click the rows to try it.</b></p>
+  <div class="frame"><div class="tv s1" id="s1"></div></div>
+
+  <h2>S2 · Pin straight from the grid</h2>
+  <p class="desc">Like the stock launcher: in the More apps grid, <kbd>OK</kbd> opens an app and a <b>long press
+    on OK</b> adds or removes it from Home. A check badge marks the ones on Home. No separate settings page.
+    <b>Click tiles to toggle.</b></p>
+  <div class="frame"><div class="tv s2" id="s2"></div></div>
+
+  <h2>S3 · Edit mode on the dock</h2>
+  <p class="desc">Long press a tile on the home screen: the tiles wobble, <kbd>◀ ▶</kbd> moves the focused one,
+    <kbd>OK</kbd> removes it, and the <b>+</b> at the end opens a picker. <kbd>Back</kbd> finishes.</p>
+  <div class="frame"><div class="tv s3" id="s3"></div></div>
+
+  <div class="notes">
+    <ul>
+      <li><b>My suggestion:</b> M3 for More apps, with S2's long press to pin/unpin there. S3's edit mode
+        is a nice addition later for reordering; S1 is the most explicit if you'd rather have a settings page.</li>
+      <li><b>Finding apps:</b> the launcher asks Android for every app with a TV launcher entry, so new apps from
+        Play Store show up by themselves. Our own launcher is left out; Settings is added as a fixed entry.</li>
+      <li><b>Saving the choice:</b> the home apps and their order are kept on the TV
+        (<code>SharedPreferences</code>), so they survive restarts and app updates.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const IMG = { plex: 'assets/plex.png', youtube: 'assets/youtube.png', svt: 'assets/svtplay.png' };
+  const APPS = [
+    { id: 'plex', name: 'Plex' }, { id: 'youtube', name: 'YouTube' }, { id: 'svt', name: 'SVT Play' },
+    { id: 'tv', name: 'Watch TV', c: '#1e40af' }, { id: 'appletv', name: 'Apple TV', c: '#1c1c1e' },
+    { id: 'play', name: 'Play Store', c: '#0f766e' }, { id: 'channels', name: 'Channels', c: '#4338ca' },
+    { id: 'media', name: 'Media', c: '#9a3412' }, { id: 'browser', name: 'Browser', c: '#334155' },
+    { id: 'help', name: 'Help', c: '#52525b' }, { id: 'settings', name: 'Settings', c: '#3f3f46' },
+  ];
+  const HOME = ['plex', 'youtube', 'svt'];
+  const DOTS = '<svg class="dots" viewBox="0 0 24 24" fill="currentColor">' +
+    [5, 12, 19].flatMap(y => [5, 12, 19].map(x => `<circle cx="${x}" cy="${y}" r="2.2"/>`)).join('') + '</svg>';
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const byId = id => APPS.find(a => a.id === id);
+
+  const ban = (a, cls = '', extra = '') => IMG[a.id]
+    ? `<div class="ban ${cls}" ${extra}><img src="${IMG[a.id]}" alt="${a.name}"></div>`
+    : `<div class="ban ${cls}" ${extra} style="background:linear-gradient(135deg, ${a.c}, color-mix(in srgb, ${a.c} 55%, #000))">${a.name}</div>`;
+  const gridTile = (a, focused, badge) =>
+    `<div class="gt ${focused ? 'focused' : ''}" data-f data-id="${a.id}" style="position:relative">
+       ${badge ? `<div class="badge">${CHECK}</div>` : ''}${ban(a)}<div class="name">${a.name}</div></div>`;
+  const homeScreen = (focusIdx = 0) => `
+    <div class="bg"></div><div class="shade"></div>
+    <div style="position:absolute;left:0;right:0;top:200px;text-align:center">
+      <div class="time" style="font-size:210px">16:52</div><div class="date" style="font-size:38px;margin-top:12px">lördag 7 november</div></div>
+    <div class="pill glass" style="position:absolute;left:50%;top:640px;transform:translateX(-50%)">
+      ${HOME.map((id, i) => ban(byId(id), i === focusIdx ? 'focused' : '')).join('')}
+      <div class="round ${focusIdx === 3 ? 'focused' : ''}">${DOTS}</div></div>`;
+  const hint = (style, items) => `<div class="hint" style="${style}">${items.map(([k, t]) => `<span><b>${k}</b>${t}</span>`).join('')}</div>`;
+
+  // M1
+  document.getElementById('m1').innerHTML = `
+    <div class="home">${homeScreen(3)}</div>
+    <div class="sheet glass"><h4>All apps</h4>
+      <div class="grid">${APPS.map((a, i) => gridTile(a, i === 3)).join('')}</div></div>
+    ${hint('right:150px;top:262px', [['OK', 'open'], ['Back', 'close']])}`;
+
+  // M2
+  const others = APPS.filter(a => !HOME.includes(a.id));
+  document.getElementById('m2').innerHTML = `
+    <div class="bg"></div><div class="shade"></div>
+    <div class="center"><div class="time">16:52</div><div class="date">lördag 7 november</div></div>
+    <div class="label" style="left:186px">On Home</div><div class="label" style="left:1062px">All apps</div>
+    <div class="track"><div class="pill glass">
+      ${HOME.map(id => ban(byId(id))).join('')}<div class="sep"></div>
+      <span class="rest" style="display:contents">${others.map((a, i) => ban(a, i === 0 ? 'focused' : '')).join('')}</span>
+    </div></div>
+    ${hint('left:50%;transform:translateX(-50%);bottom:110px', [['◀ ▶', 'browse'], ['OK', 'open'], ['Back', 'collapse']])}`;
+
+  // M3
+  document.getElementById('m3').innerHTML = `
+    <div class="bg deep"></div><div class="shade"></div>
+    <div class="top"><h4>Apps</h4><div class="clock">16:52</div></div>
+    <div class="sec" style="top:200px">On Home</div>
+    <div class="grid" style="top:250px">${HOME.map((id, i) => gridTile(byId(id), false)).join('')}</div>
+    <div class="sec" style="top:520px">All apps</div>
+    <div class="grid" style="top:570px">${others.map((a, i) => gridTile(a, i === 0)).join('')}</div>`;
+
+  // S1
+  const s1Home = [...HOME];
+  const renderS1 = (focusId = 'tv') => {
+    document.getElementById('s1').innerHTML = `
+      <div class="bg deep"></div><div class="shade"></div>
+      <div class="panel glass"><h4>Home screen apps</h4>
+        <div class="sub">Checked apps appear on the home screen, in this order.</div>
+        <div class="list">${[...s1Home.map(byId), ...APPS.filter(a => !s1Home.includes(a.id))].slice(0, 9).map(a => `
+          <div class="row ${s1Home.includes(a.id) ? 'on' : ''} ${a.id === focusId ? 'focused' : ''}" data-f data-id="${a.id}">
+            <div class="box">${CHECK}</div>${ban(a)}<div class="name">${a.name}</div><div class="move">◀ ▶ move</div></div>`).join('')}
+        </div></div>
+      <div class="preview"><div class="cap">Preview</div>
+        <div class="mini"><div class="bg"></div><div class="t">16:52</div>
+          <div class="pill glass">${s1Home.map(id => ban(byId(id))).join('')}<div class="round">${DOTS}</div></div></div>
+        <div class="note">OK: add / remove<br>◀ ▶ on a checked app: change the order<br>Back: done (saved automatically)</div>
+      </div>`;
+    document.querySelectorAll('#s1 .row').forEach(r => r.addEventListener('click', () => {
+      const id = r.dataset.id, i = s1Home.indexOf(id);
+      if (i >= 0) s1Home.splice(i, 1); else s1Home.push(id);
+      renderS1(id);
+    }));
+  };
+  renderS1();
+
+  // S2
+  const s2Home = new Set(HOME);
+  const renderS2 = (focusId = 'tv') => {
+    document.getElementById('s2').innerHTML = `
+      <div class="bg deep"></div><div class="shade"></div>
+      <div class="m3" style="position:absolute;inset:0">
+        <div class="top"><h4>Apps</h4><div class="clock">16:52</div></div>
+        <div class="grid" style="top:220px">${APPS.map(a => gridTile(a, a.id === focusId, s2Home.has(a.id))).join('')}</div>
+      </div>
+      <div class="tip" style="left:50%;transform:translateX(-50%);bottom:110px">
+        ${byId(focusId).name} · <b style="font-weight:500">OK</b> open · <b style="font-weight:500">Hold OK</b>
+        ${s2Home.has(focusId) ? 'remove from Home' : 'add to Home'}</div>`;
+    document.querySelectorAll('#s2 .gt').forEach(t => t.addEventListener('click', () => {
+      const id = t.dataset.id;
+      s2Home.has(id) ? s2Home.delete(id) : s2Home.add(id);
+      renderS2(id);
+    }));
+  };
+  renderS2();
+
+  // S3
+  document.getElementById('s3').innerHTML = `
+    <div class="bg"></div><div class="shade"></div>
+    <div class="center"><div class="time">16:52</div><div class="date">lördag 7 november</div></div>
+    <div class="banner-top">Editing Home</div>
+    <div class="pill glass">
+      ${HOME.map((id, i) => `<div class="slot">${ban(byId(id), i === 1 ? 'focused' : '')}<div class="x">×</div>
+        ${i === 1 ? '<div class="arrow" style="left:-34px">◀</div><div class="arrow" style="right:-34px">▶</div>' : ''}</div>`).join('')}
+      <div class="round"><span class="plus">+</span></div></div>
+    ${hint('left:50%;transform:translateX(-50%);top:880px', [['◀ ▶', 'move'], ['OK', 'remove'], ['+', 'add app'], ['Back', 'done']])}`;
+
+  // Scale canvases, and simple click/arrow focus for M1-M3.
+  const ro = new ResizeObserver(es => es.forEach(e =>
+    e.target.querySelector('.tv').style.setProperty('--k', e.contentRect.width / 1920)));
+  document.querySelectorAll('.frame').forEach(f => ro.observe(f));
+  let active = null;
+  const focus = (tv, el) => { tv.querySelectorAll('.focused').forEach(t => t.classList.remove('focused'));
+                              el.classList.add('focused'); active = tv; };
+  ['m1', 'm3'].forEach(id => document.querySelectorAll(`#${id} [data-f]`).forEach(el =>
+    el.addEventListener('click', () => focus(el.closest('.tv'), el))));
+  document.addEventListener('keydown', e => {
+    if (!active || !e.key.startsWith('Arrow')) return;
+    const items = [...active.querySelectorAll('[data-f]')];
+    const i = items.findIndex(t => t.classList.contains('focused'));
+    const next = items[Math.min(items.length - 1, Math.max(0, i + (/Right|Down/.test(e.key) ? 1 : -1)))];
+    if (next) { focus(active, next); e.preventDefault(); }
+  });
+</script>
+</body>
+</html>
