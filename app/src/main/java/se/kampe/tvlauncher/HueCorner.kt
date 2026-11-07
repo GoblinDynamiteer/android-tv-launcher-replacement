@@ -41,6 +41,9 @@ class HueCorner(
     private val scroll: ScrollView = panel.findViewById(R.id.hue_scroll)
     private val list: ViewGroup = panel.findViewById(R.id.hue_list)
 
+    /** Folds the bar to its bulb while focus is elsewhere; stays open while the list is. */
+    val collapsing = CollapsingBar(bar, bar.findViewById(R.id.hue_icon), { segment }, { isOpen })
+
     private var groups: List<HueGroup> = emptyList()
     /** Index in [groups] of the room/zone the open list shows. */
     private var shown = 0
@@ -172,6 +175,7 @@ class HueCorner(
             button.setOnClickListener { chooseFavourite(fav.key) }
             bar.addView(button)
         }
+        collapsing.sync()
         onBarChanged()
         if (focusedId != null) {
             ((0 until bar.childCount).map(bar::getChildAt).firstOrNull { it.tag == focusedId } ?: segment).requestFocus()

@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private lateinit var moveHint: TextView
     private var dockKeys: List<String>? = null
     private lateinit var inputBar: GlassView
+    private lateinit var inputCollapsing: CollapsingBar
     private lateinit var hue: HueCorner
     private var shownInputs: List<HdmiInput>? = null
 
@@ -63,11 +64,18 @@ class MainActivity : Activity() {
         dock.glass = wallpaper.glass
         inputBar = findViewById(R.id.inputs)
         inputBar.glass = wallpaper.glass
+        inputCollapsing = CollapsingBar(inputBar, findViewById(R.id.inputs_icon), { inputBar.getChildAt(1) })
         moveHint = findViewById(R.id.move_hint)
 
         val hueBar = findViewById<GlassView>(R.id.hue).apply { glass = wallpaper.glass }
         val huePanel = findViewById<GlassView>(R.id.hue_panel).apply { glass = wallpaper.glass }
         hue = HueCorner(this, hueBar, huePanel, findViewById(R.id.hue_dim), ::linkCorners)
+
+        // The top corners fold to their icons when focus leaves them.
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, focused ->
+            hue.collapsing.onFocusChanged(focused)
+            inputCollapsing.onFocusChanged(focused)
+        }
     }
 
     override fun onStart() {
@@ -232,21 +240,24 @@ class MainActivity : Activity() {
         // ▶ on the last input stays in the bar instead of dropping to the dock.
         segments.lastOrNull()?.let { it.nextFocusRightId = it.id }
         inputBar.visibility = if (inputs.isEmpty()) View.GONE else View.VISIBLE
+        inputCollapsing.sync()
         linkCorners()
         segments.firstOrNull { it.tag == focusedId }?.requestFocus()
     }
 
     /**
-     * Links the two top corners: ◀ ▶ move between the Hue bar's last button and the first
-     * input, and at the outer ends focus stays put instead of dropping down to the dock.
+     * Links the two top corners: ◀ ▶ move from the Hue bar's last button to the (folded) input
+     * bar's icon and from the first input to the Hue bulb, which unfold their bars. At the
+     * outer ends focus stays put instead of dropping down to the dock.
      */
     private fun linkCorners() {
+        val inputsIcon = findViewById<View>(R.id.inputs_icon).takeIf { inputBar.visibility == View.VISIBLE }
         val firstInput = inputBar.getChildAt(1)?.takeIf { inputBar.visibility == View.VISIBLE }
         val hueLast = hue.lastSegment
         hue.segment.nextFocusLeftId = hue.segment.id
         hue.segment.nextFocusRightId = View.NO_ID // to the first favourite, if any
-        hueLast.nextFocusRightId = firstInput?.id ?: hueLast.id
-        firstInput?.nextFocusLeftId = if (hue.isVisible) hueLast.id else firstInput?.id ?: View.NO_ID
+        hueLast.nextFocusRightId = inputsIcon?.id ?: hueLast.id
+        firstInput?.nextFocusLeftId = if (hue.isVisible) R.id.hue_icon else firstInput?.id ?: View.NO_ID
     }
 
     private fun makeInputSegment(input: HdmiInput): View {

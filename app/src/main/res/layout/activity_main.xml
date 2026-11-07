@@ -58,13 +58,16 @@
         android:padding="4dp"
         android:visibility="gone">
 
+        <!-- 30dp with 5dp padding: folded, the bar is a 38dp circle around it. -->
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="9dp"
-            android:layout_marginEnd="6dp"
+            android:id="@+id/hue_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="1dp"
             android:alpha="0.75"
             android:contentDescription="@string/hue"
+            android:padding="5dp"
             android:src="@drawable/ic_lightbulb" />
 
         <LinearLayout
@@ -122,13 +125,16 @@
         android:padding="4dp"
         android:visibility="gone">
 
+        <!-- 30dp with 5dp padding: folded, the bar is a 38dp circle around it. -->
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="9dp"
-            android:layout_marginEnd="6dp"
+            android:id="@+id/inputs_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="1dp"
             android:alpha="0.75"
             android:contentDescription="@string/inputs"
+            android:padding="5dp"
             android:src="@drawable/ic_gamepad" />
     </se.kampe.tvlauncher.GlassView>
 
