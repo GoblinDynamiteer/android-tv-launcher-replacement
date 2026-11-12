@@ -44,3 +44,8 @@ You need JDK 17 and the Android SDK (platform 35). The TV must be reachable over
 
 The HTML mockups in `design/` show each feature's variants on a 1920×1080 canvas. Open one in a
 browser and use the arrow keys.
+
+## Credits
+
+The default wallpaper is a photo by [Colin Watts](https://unsplash.com/@colinwatts) on
+[Unsplash](https://unsplash.com/photos/T5g1bLqJego), cropped to 16:9.
