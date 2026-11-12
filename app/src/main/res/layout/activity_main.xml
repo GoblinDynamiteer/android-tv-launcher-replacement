@@ -22,7 +22,9 @@
         android:importantForAccessibility="no"
         android:scaleType="centerCrop" />
 
+    <!-- Clock and date; hidden while an HDMI input has focus. -->
     <LinearLayout
+        android:id="@+id/clock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
