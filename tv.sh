@@ -17,6 +17,14 @@
 #   ./tv.sh wake-mac "<input name>" <mac>
 #                        wake that input's device over the network (Wake-on-LAN) when it's
 #                        picked while asleep; no arguments lists the configured ones
+#   ./tv.sh wallpaper [list]
+#                        list the wallpapers per input/app, and the space left on the TV
+#   ./tv.sh wallpaper add "<name>" <image>...
+#                        add images (jpg/png/webp) for an input or dock app, by the name the
+#                        launcher shows (or the app's package); one is picked at random and
+#                        faded in while it has focus
+#   ./tv.sh wallpaper remove "<name>" [<image>]
+#                        remove that name's wallpapers, or only the one with that file name
 #
 # `build` uses the working tree as it is; `ci-build` builds committed changes only.
 # Env: ADB_SERIAL (default 192.168.50.126:5555), JAVA_HOME (default the newest
@@ -194,6 +202,98 @@ wake_mac() {
     adb -s "$SERIAL" shell "run-as $PKG cat files/wake_macs" | tr -d '\r'
 }
 
+WALL_DIR=files/wallpapers
+
+wall_index() {
+    adb -s "$SERIAL" shell "run-as $PKG cat $WALL_DIR/index 2>/dev/null" | tr -d '\r' || true
+}
+
+# Writes the index (stdin), then deletes image files no line refers to any more.
+wall_write_index() {
+    adb -s "$SERIAL" shell "run-as $PKG sh -c 'mkdir -p $WALL_DIR && cat > $WALL_DIR/index'"
+    local keep f
+    keep="$(wall_index | cut -f2 | sort -u)"
+    for f in $(adb -s "$SERIAL" shell "run-as $PKG ls $WALL_DIR" | tr -d '\r'); do
+        [[ "$f" == index ]] && continue
+        grep -qxF "$f" <<<"$keep" || adb -s "$SERIAL" shell "run-as $PKG rm $WALL_DIR/$f"
+    done
+}
+
+# How much the wallpapers take, and what's left on the TV's app storage (/data).
+wall_space() {
+    local used free
+    used="$(adb -s "$SERIAL" shell "run-as $PKG du -sk $WALL_DIR 2>/dev/null" | awk '{print $1}')"
+    free="$(adb -s "$SERIAL" shell df -k /data | awk 'NR == 2 {print $4}')"
+    awk -v u="${used:-0}" -v f="${free:-0}" \
+        'BEGIN { printf "\nWallpapers use %.1f MB; %.1f GB free on the TV.\n", u / 1024, f / 1048576 }'
+}
+
+wallpaper() {
+    connect
+    adb -s "$SERIAL" shell pm path "$PKG" >/dev/null 2>&1 ||
+        die "$PKG is not installed; run ./tv.sh install first."
+    local cmd="${1:-list}"
+    shift || true
+    case "$cmd" in
+        list)
+            local index
+            index="$(wall_index | grep -v '^$' || true)"
+            if [[ -z "$index" ]]; then
+                echo "(none)"
+                wall_space
+                return
+            fi
+            sort -t$'\t' -k1,1 -s <<<"$index" | awk -F'\t' 'NF >= 2 {
+                if ($1 != last) print $1
+                last = $1
+                print "    " ($3 != "" ? $3 : $2) "  (" $2 ")"
+            }'
+            wall_space
+            ;;
+        add)
+            local name="${1:-}"
+            shift || true
+            [[ -n "$name" && $# -gt 0 ]] || die 'Usage: ./tv.sh wallpaper add "<name>" <image>...'
+            local index img ext stored size
+            index="$(wall_index)"
+            for img in "$@"; do
+                [[ -f "$img" ]] || die "No such file: $img"
+                ext="${img##*.}"
+                ext="${ext,,}"
+                [[ "$ext" =~ ^(jpg|jpeg|png|webp)$ ]] || die "Not a jpg/png/webp image: $img"
+                stored="$(sha1sum "$img" | cut -c1-12).$ext"
+                adb -s "$SERIAL" exec-in "run-as $PKG sh -c 'mkdir -p $WALL_DIR && cat > $WALL_DIR/$stored'" <"$img"
+                # exec-in can return before the TV has written the last bytes.
+                for _ in $(seq 20); do
+                    size="$(adb -s "$SERIAL" shell "run-as $PKG wc -c $WALL_DIR/$stored" | awk '{print $1}')"
+                    [[ "$size" == "$(stat -c %s "$img")" ]] && break
+                    sleep 0.5
+                done
+                [[ "$size" == "$(stat -c %s "$img")" ]] || die "Copying $img failed ($size bytes arrived)."
+                index="$(printf '%s\n' "$index" | awk -F'\t' -v n="$name" -v f="$stored" \
+                    'NF && !(tolower($1) == tolower(n) && $2 == f)')"
+                index+=$'\n'"$name"$'\t'"$stored"$'\t'"$(basename "$img")"
+                echo "Added $(basename "$img") for \"$name\" ($((size / 1024)) KB)"
+            done
+            printf '%s\n' "$index" | grep -v '^$' | wall_write_index
+            ;;
+        remove)
+            local name="${1:-}" only="${2:-}"
+            [[ -n "$name" ]] || die 'Usage: ./tv.sh wallpaper remove "<name>" [<image>]'
+            [[ -z "$only" ]] || only="$(basename "$only")"
+            local index kept
+            index="$(wall_index | grep -v '^$' || true)"
+            kept="$(printf '%s\n' "$index" | awk -F'\t' -v n="$name" -v o="$only" \
+                'NF && !(tolower($1) == tolower(n) && (o == "" || $2 == o || $3 == o))')"
+            [[ "$kept" != "$index" ]] || die "No wallpaper matches \"$name\"${only:+ $only}."
+            printf '%s\n' "$kept" | grep -v '^$' | wall_write_index || true
+            echo "Removed. Now:"
+            wallpaper list
+            ;;
+        *) die 'Usage: ./tv.sh wallpaper [list | add "<name>" <image>... | remove "<name>" [<image>]]' ;;
+    esac
+}
+
 case "${1:-}" in
     build) build ;;
     ci-build) ci_build ;;
@@ -205,5 +305,6 @@ case "${1:-}" in
     home) home "${2:-}" ;;
     hue-key) hue_key "${2:-}" ;;
     wake-mac) shift; wake_mac "$@" ;;
+    wallpaper) shift; wallpaper "$@" ;;
     *) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
 esac
