@@ -19,6 +19,7 @@ import android.widget.LinearLayout
  * A pill-shaped (or, with [cornerRadius], rounded) "frosted glass" panel: draws the part of the
  * pre-blurred [glass] wallpaper that lies behind it, a light white fill and a thin border.
  * [glass] must cover the whole window (same aspect ratio), as the wallpaper does.
+ * [glassFade] is drawn over it at [fade] (0-1) while the wallpaper cross-fades to another.
  */
 class GlassView @JvmOverloads constructor(
     context: Context,
@@ -29,6 +30,19 @@ class GlassView @JvmOverloads constructor(
         set(value) {
             field = value
             glassPaint.shader = value?.let { BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP) }
+            invalidate()
+        }
+
+    var glassFade: Bitmap? = null
+        set(value) {
+            field = value
+            fadePaint.shader = value?.let { BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP) }
+            invalidate()
+        }
+
+    var fade = 0f
+        set(value) {
+            field = value
             invalidate()
         }
 
@@ -44,6 +58,7 @@ class GlassView @JvmOverloads constructor(
 
     private val density = resources.displayMetrics.density
     private val glassPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val fadePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(26, 255, 255, 255) }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -71,19 +86,25 @@ class GlassView @JvmOverloads constructor(
         val radius = radius()
         rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
-        glass?.let { bmp ->
-            // Map the bitmap onto the window, then shift it to this view's position.
-            getLocationInWindow(location)
-            val root = rootView
-            shaderMatrix.setScale(root.width.toFloat() / bmp.width, root.height.toFloat() / bmp.height)
-            shaderMatrix.postTranslate(-location[0].toFloat(), -location[1].toFloat())
-            glassPaint.shader.setLocalMatrix(shaderMatrix)
-            canvas.drawRoundRect(rect, radius, radius, glassPaint)
+        getLocationInWindow(location)
+        glass?.let { drawGlass(canvas, it, glassPaint, radius) }
+        glassFade?.takeIf { fade > 0f }?.let {
+            fadePaint.alpha = (fade.coerceAtMost(1f) * 255).toInt()
+            drawGlass(canvas, it, fadePaint, radius)
         }
         canvas.drawRoundRect(rect, radius, radius, fillPaint)
 
         val half = borderPaint.strokeWidth / 2
         rect.inset(half, half)
         canvas.drawRoundRect(rect, radius - half, radius - half, borderPaint)
+    }
+
+    /** Draws the part of [bmp] (mapped onto the whole window) that lies behind this view. */
+    private fun drawGlass(canvas: Canvas, bmp: Bitmap, paint: Paint, radius: Float) {
+        val root = rootView
+        shaderMatrix.setScale(root.width.toFloat() / bmp.width, root.height.toFloat() / bmp.height)
+        shaderMatrix.postTranslate(-location[0].toFloat(), -location[1].toFloat())
+        paint.shader.setLocalMatrix(shaderMatrix)
+        canvas.drawRoundRect(rect, radius, radius, paint)
     }
 }

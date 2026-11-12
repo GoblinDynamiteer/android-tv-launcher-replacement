@@ -1,5 +1,7 @@
 package se.kampe.tvlauncher
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
@@ -37,6 +39,22 @@ class MainActivity : Activity() {
     private lateinit var inputBar: GlassView
     private lateinit var inputCollapsing: CollapsingBar
     private lateinit var hue: HueCorner
+    private val dockApps = HashMap<String, AppEntry>()
+
+    /** Wallpapers per input or app, faded in while it has focus (design/wallpaper-mockups.html, P2). */
+    private lateinit var itemWallpapers: ItemWallpapers
+    private lateinit var homeWallpaper: Wallpaper.Result
+    private lateinit var wallpaperView: ImageView
+    private lateinit var wallpaperFadeView: ImageView
+    private lateinit var glassViews: List<GlassView>
+    /** Shown in full under the fade layer, and the one being faded in (or null). */
+    private lateinit var wallpaperBase: Wallpaper.Result
+    private var wallpaperTarget: Wallpaper.Result? = null
+    private var wallpaperFade: ValueAnimator? = null
+    /** The name of the focused item whose wallpaper is (being) shown, or null for the default. */
+    private var wallpaperName: String? = null
+    private val lastPick = HashMap<String, String>()
+    private val wallpaperHandler = Handler(Looper.getMainLooper())
     /** The inputs and the waking one the bar was built from, to rebuild only on changes. */
     private var shownInputs: Pair<List<HdmiInput>, String?>? = null
 
@@ -70,7 +88,12 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         val wallpaper = Wallpaper.load(resources, R.drawable.wallpaper, Wallpaper.HOME)
-        findViewById<ImageView>(R.id.wallpaper).setImageBitmap(wallpaper.background)
+        homeWallpaper = wallpaper
+        wallpaperBase = wallpaper
+        wallpaperView = findViewById(R.id.wallpaper)
+        wallpaperView.setImageBitmap(wallpaper.background)
+        wallpaperFadeView = findViewById(R.id.wallpaper_fade)
+        itemWallpapers = ItemWallpapers(this)
         dock = findViewById(R.id.dock)
         dock.glass = wallpaper.glass
         inputBar = findViewById(R.id.inputs)
@@ -81,11 +104,13 @@ class MainActivity : Activity() {
         val hueBar = findViewById<GlassView>(R.id.hue).apply { glass = wallpaper.glass }
         val huePanel = findViewById<GlassView>(R.id.hue_panel).apply { glass = wallpaper.glass }
         hue = HueCorner(this, hueBar, huePanel, findViewById(R.id.hue_dim), ::linkCorners)
+        glassViews = listOf(dock, inputBar, hueBar, huePanel)
 
         // The top corners fold to their icons when focus leaves them.
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, focused ->
             hue.collapsing.onFocusChanged(focused)
             inputCollapsing.onFocusChanged(focused)
+            showWallpaperFor(focused)
         }
     }
 
@@ -106,6 +131,7 @@ class MainActivity : Activity() {
         if (apps.map { it.key } != dockKeys) buildDock(apps)
         refreshInputs()
         hue.start()
+        itemWallpapers.prefetch()
     }
 
     override fun onPause() {
@@ -160,6 +186,8 @@ class MainActivity : Activity() {
     private fun buildDock(apps: List<AppEntry>) {
         val focusedKey = dock.focusedChild?.tag
         dock.removeAllViews()
+        dockApps.clear()
+        apps.forEach { dockApps[it.key] = it }
         apps.forEach { dock.addView(makeTile(dock, it)) }
         dock.addView(makeMoreButton(dock))
         dockKeys = apps.map { it.key }
@@ -351,6 +379,82 @@ class MainActivity : Activity() {
             val mac = if (input.on) null else Wake.macFor(this, input.label)
             if (mac != null) startWaking(input, mac) else openInput(input)
         }
+    }
+
+    /** Names an item's wallpapers can be added under: the input's or app's label, or the package. */
+    private fun wallpaperNames(view: View?): List<String> {
+        val tag = view?.tag as? String ?: return emptyList()
+        if (view.parent === dock) dockApps[tag]?.let { return listOf(it.label.toString(), it.key) }
+        if (view.parent === inputBar) {
+            shownInputs?.first?.firstOrNull { it.id == tag }?.let { return listOf(it.label) }
+        }
+        return emptyList()
+    }
+
+    /**
+     * Fades to a random one of [focused]'s own wallpapers, or back to the default if it has
+     * none. Waits briefly, so sweeping along the dock doesn't decode every tile's images.
+     */
+    private fun showWallpaperFor(focused: View?) {
+        val names = wallpaperNames(focused)
+        val files = itemWallpapers.filesFor(names)
+        val name = if (files.isEmpty()) null else names.first()
+        if (name == wallpaperName) return
+        wallpaperName = name
+        wallpaperHandler.removeCallbacksAndMessages(null)
+        if (name == null) {
+            fadeWallpaperTo(homeWallpaper)
+            return
+        }
+        // A new pick each time, if there is more than one.
+        val pick = files.filter { it.name != lastPick[name] }.ifEmpty { files }.random()
+        lastPick[name] = pick.name
+        wallpaperHandler.postDelayed({
+            itemWallpapers.load(pick) { result ->
+                if (wallpaperName == name) fadeWallpaperTo(result ?: homeWallpaper)
+            }
+        }, 120)
+    }
+
+    /** Cross-fades the background and the glass panels to [target] in 0.5 s. */
+    private fun fadeWallpaperTo(target: Wallpaper.Result) {
+        val current = wallpaperTarget
+        wallpaperFade?.cancel()
+        // Whichever of the two layers shows most becomes the base for the next fade.
+        if (current != null && wallpaperFadeView.alpha >= 0.5f) setWallpaperBase(current)
+        wallpaperTarget = null
+        setWallpaperFade(0f)
+        if (target === wallpaperBase) return
+
+        wallpaperTarget = target
+        wallpaperFadeView.setImageBitmap(target.background)
+        glassViews.forEach { it.glassFade = target.glass }
+        wallpaperFade = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 500
+            addUpdateListener { setWallpaperFade(it.animatedValue as Float) }
+            addListener(object : AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationCancel(animation: Animator) { cancelled = true }
+                override fun onAnimationEnd(animation: Animator) {
+                    if (cancelled) return
+                    setWallpaperBase(target)
+                    wallpaperTarget = null
+                    setWallpaperFade(0f)
+                }
+            })
+            start()
+        }
+    }
+
+    private fun setWallpaperBase(result: Wallpaper.Result) {
+        wallpaperBase = result
+        wallpaperView.setImageBitmap(result.background)
+        glassViews.forEach { it.glass = result.glass }
+    }
+
+    private fun setWallpaperFade(fade: Float) {
+        wallpaperFadeView.alpha = fade
+        glassViews.forEach { it.fade = fade }
     }
 
     private fun openInput(input: HdmiInput) {
