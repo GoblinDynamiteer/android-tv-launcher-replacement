@@ -242,7 +242,11 @@ class MainActivity : Activity() {
         })
     }
 
-    /** Rebuilds the input bar (top right) if the HDMI inputs or their on/standby state changed. */
+    /**
+     * Updates the input bar (top right) if the HDMI inputs or their on/standby state changed.
+     * The segments are rebuilt only when inputs come or go; a state change (on, waking) updates
+     * them in place, because removing the focused segment hands focus to the Hue bulb.
+     */
     private fun refreshInputs() {
         val inputs = Inputs.hdmi(this)
         // The device being woken has come up: switch to it.
@@ -252,9 +256,15 @@ class MainActivity : Activity() {
         }
         val state = inputs to wakingId
         if (state == shownInputs) return
+        val sameInputs = shownInputs?.first?.map { it.id } == inputs.map { it.id }
         shownInputs = state
         wakePulse?.cancel()
+        wakePulse = null
 
+        if (sameInputs) {
+            inputSegments().zip(inputs).forEach { (segment, input) -> bindInputSegment(segment, input) }
+            return
+        }
         val focusedId = inputBar.focusedChild?.tag
         inputBar.removeViews(1, inputBar.childCount - 1) // keep the gamepad icon
         val segments = inputs.mapIndexed { i, input ->
@@ -268,6 +278,9 @@ class MainActivity : Activity() {
         linkCorners()
         segments.firstOrNull { it.tag == focusedId }?.requestFocus()
     }
+
+    /** The input segments in the bar, without the gamepad icon and the dividers. */
+    private fun inputSegments() = (1 until inputBar.childCount).map(inputBar::getChildAt).filter { it.tag is String }
 
     /**
      * Links the two top corners and the dock to them: ◀ ▶ move from the Hue bar's last button to
@@ -301,6 +314,12 @@ class MainActivity : Activity() {
     private fun makeInputSegment(input: HdmiInput): View {
         val segment = layoutInflater.inflate(R.layout.input_segment, inputBar, false)
         segment.id = View.generateViewId()
+        bindInputSegment(segment, input)
+        return segment
+    }
+
+    /** Shows [input]'s name and state (on, standby, waking) on [segment]. */
+    private fun bindInputSegment(segment: View, input: HdmiInput) {
         segment.tag = input.id
         segment.findViewById<TextView>(R.id.label).text = input.label
         val dot = segment.findViewById<View>(R.id.dot)
@@ -316,9 +335,10 @@ class MainActivity : Activity() {
                 })
             }
         }
-        paintDot(false)
+        paintDot(segment.isFocused)
+        dot.alpha = 1f
+        segment.findViewById<View>(R.id.sub).visibility = if (waking) View.VISIBLE else View.GONE
         if (waking) {
-            segment.findViewById<View>(R.id.sub).visibility = View.VISIBLE
             wakePulse = ObjectAnimator.ofFloat(dot, View.ALPHA, 1f, 0.35f).apply {
                 duration = 500
                 repeatMode = ValueAnimator.REVERSE
@@ -331,7 +351,6 @@ class MainActivity : Activity() {
             val mac = if (input.on) null else Wake.macFor(this, input.label)
             if (mac != null) startWaking(input, mac) else openInput(input)
         }
-        return segment
     }
 
     private fun openInput(input: HdmiInput) {
