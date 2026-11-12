@@ -27,3 +27,6 @@ keystore.properties
 
 # APK backups pulled from the TV by debloat.sh
 backup/
+
+# Personal wallpapers used by the design mockups
+design/assets/local/
