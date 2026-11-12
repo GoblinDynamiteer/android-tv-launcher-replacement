@@ -40,6 +40,9 @@ class MainActivity : Activity() {
     private lateinit var inputCollapsing: CollapsingBar
     private lateinit var hue: HueCorner
     private val dockApps = HashMap<String, AppEntry>()
+    private lateinit var clock: View
+    /** An HDMI input has focus: the clock is hidden and the dock dimmed, to show its wallpaper. */
+    private var inputFocused = false
 
     /** Wallpapers per input or app, faded in while it has focus (design/wallpaper-mockups.html, P2). */
     private lateinit var itemWallpapers: ItemWallpapers
@@ -100,6 +103,7 @@ class MainActivity : Activity() {
         inputBar.glass = wallpaper.glass
         inputCollapsing = CollapsingBar(inputBar, findViewById(R.id.inputs_icon), { inputBar.getChildAt(1) })
         moveHint = findViewById(R.id.move_hint)
+        clock = findViewById(R.id.clock)
 
         val hueBar = findViewById<GlassView>(R.id.hue).apply { glass = wallpaper.glass }
         val huePanel = findViewById<GlassView>(R.id.hue_panel).apply { glass = wallpaper.glass }
@@ -111,6 +115,7 @@ class MainActivity : Activity() {
             hue.collapsing.onFocusChanged(focused)
             inputCollapsing.onFocusChanged(focused)
             showWallpaperFor(focused)
+            setInputFocused(focused?.parent === inputBar)
         }
     }
 
@@ -379,6 +384,14 @@ class MainActivity : Activity() {
             val mac = if (input.on) null else Wake.macFor(this, input.label)
             if (mac != null) startWaking(input, mac) else openInput(input)
         }
+    }
+
+    /** Hides the clock and dims the dock while focus is in the input bar, so its wallpaper shows. */
+    private fun setInputFocused(focused: Boolean) {
+        if (focused == inputFocused) return
+        inputFocused = focused
+        clock.animate().alpha(if (focused) 0f else 1f).setDuration(300).start()
+        dock.animate().alpha(if (focused) 0.45f else 1f).setDuration(300).start()
     }
 
     /** Names an item's wallpapers can be added under: the input's or app's label, or the package. */
