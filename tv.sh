@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Build the launcher on GitHub Actions and run it on the TV.
+# Build the launcher and run it on the TV.
 #
-#   ./tv.sh build        push the current branch, wait for CI, download the APK
-#   ./tv.sh install      install the downloaded APK on the TV
+#   ./tv.sh build        build the debug APK locally (JDK 17 + Android SDK on this PC)
+#   ./tv.sh ci-build     push the current branch, wait for CI, download its APK instead
+#   ./tv.sh install      install the last built APK on the TV
 #   ./tv.sh start        open the launcher on the TV
 #   ./tv.sh deploy       build + install + start
 #   ./tv.sh shot [--no-open] [file]
@@ -17,8 +18,10 @@
 #                        wake that input's device over the network (Wake-on-LAN) when it's
 #                        picked while asleep; no arguments lists the configured ones
 #
-# Only committed changes are built. Env: ADB_SERIAL (default 192.168.50.126:5555),
-# REMOTE (default github), VIEWER (screenshot viewer, default eog).
+# `build` uses the working tree as it is; `ci-build` builds committed changes only.
+# Env: ADB_SERIAL (default 192.168.50.126:5555), JAVA_HOME (default the newest
+# ~/.jdks/jdk-17*), ANDROID_HOME (default ~/Android/Sdk), REMOTE (default github),
+# VIEWER (screenshot viewer, default eog).
 set -euo pipefail
 
 SERIAL="${ADB_SERIAL:-192.168.50.126:5555}"
@@ -27,7 +30,7 @@ VIEWER="${VIEWER:-eog}" # xdg-open would pick Chrome for PNGs here
 PKG=se.kampe.tvlauncher
 ACTIVITY=.MainActivity
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APK_DIR="$ROOT/build/ci"
+APK_DIR="$ROOT/build/apk"
 STOCK_HOME=com.google.android.tvlauncher/.MainActivity
 WORKFLOW=build.yml
 ARTIFACT=app-debug
@@ -42,6 +45,25 @@ connect() {
 }
 
 build() {
+    cd "$ROOT"
+    # Same key as CI, so the APK can update the installed app (adb install -r).
+    [[ -f app/debug.keystore ]] || die "app/debug.keystore is missing (the shared debug key)."
+    if [[ -z "${JAVA_HOME:-}" ]]; then
+        JAVA_HOME="$(ls -d "$HOME"/.jdks/jdk-17* 2>/dev/null | sort -V | tail -1)"
+        [[ -n "$JAVA_HOME" ]] || die "No JDK 17: set JAVA_HOME."
+        export JAVA_HOME
+    fi
+    local sdk="${ANDROID_HOME:-$HOME/Android/Sdk}"
+    [[ -f local.properties ]] || echo "sdk.dir=$sdk" >local.properties
+
+    ./gradlew --console=plain -q assembleDebug
+    rm -rf "$APK_DIR"
+    mkdir -p "$APK_DIR"
+    cp app/build/outputs/apk/debug/app-debug.apk "$APK_DIR/"
+    echo "APK: $APK_DIR/app-debug.apk"
+}
+
+ci_build() {
     cd "$ROOT"
     [[ -z "$(git status --porcelain)" ]] ||
         echo "Note: uncommitted changes are not part of the CI build." >&2
@@ -174,6 +196,7 @@ wake_mac() {
 
 case "${1:-}" in
     build) build ;;
+    ci-build) ci_build ;;
     install) install ;;
     start) start ;;
     deploy) build && install && start ;;
